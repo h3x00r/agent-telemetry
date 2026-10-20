@@ -1,0 +1,14 @@
+# Grafana 13.2.3 dashboard provisioning: loads every *.json file in this folder.
+# The JSON files are the source of truth: the UI cannot save over them. Edit a file
+# and Grafana reloads it within updateIntervalSeconds; "Save as copy" makes a personal copy.
+apiVersion: 1
+
+providers:
+  - name: agent-telemetry
+    folder: Agent telemetry
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/provisioning/dashboards

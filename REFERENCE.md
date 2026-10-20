@@ -36,6 +36,7 @@ docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt   # exp
 `.env` holds the OTLP bearer token, the TLS SANs, the Grafana admin login and Grafana's encryption keys. Back it up, and never change the Grafana keys once Grafana stores secrets.
 
 - The admin credentials apply only on the first start with an empty `grafana-data` volume. After that, see [Reset the Grafana admin password](runbook.md#reset-the-grafana-admin-password).
+- The **Claude Code** dashboard comes from `grafana/provisioning/dashboards/claude-code.json` and is the home page. It can't be saved from the UI: edit the file (Grafana reloads it within a minute), or open it from **Dashboards → Agent telemetry** and use **Save as copy**. Other `*.json` files in that folder load too.
 - Grafana is HTTPS only; plain http returns 400. To avoid the browser warning, import `otel-ca.crt` as a trusted CA.
 - On first start, Grafana downloads the pinned Drilldown apps (Logs, Traces, Metrics) from grafana.com. That needs outbound HTTPS once; after that they live in the `grafana-data` volume.
 
@@ -90,6 +91,7 @@ Loki index labels are `service_name`, `service_namespace`, `deployment_environme
 ## Behaviour and limits
 
 - **Buffering**: the collector keeps a persistent queue (32 MiB per signal, fsync'd) and retries until a backend is back. Data is lost if the queue fills up, if a backend permanently rejects it (HTTP 400), or while the collector itself is down (`down`, upgrades, reboots): agents retry only briefly and do not spool. Watch `otelcol_exporter_queue_size`, `otelcol_exporter_send_failed_*` and `otelcol_receiver_refused_*` (job `otel-collector`).
+- **Idle agents**: Claude Code sends a series only when it changes. Prometheus looks back 31 min (`--query.lookback-delta`), longer than the collector's 30 min delta → cumulative window, so per-bucket `increase()` still counts the first change after an idle gap.
 - **Delta → cumulative** state lives in the collector's memory. A collector restart, or 30 min without data for a series, looks like a counter reset, which `increase()` handles. Run exactly one collector.
 - **Experimental Prometheus features**: `created-timestamp-zero-ingestion` (counts each new series' first export) and `promql-extended-range-selectors` (`anchored`).
 - **Retention**: Prometheus 15d or 3GB, Loki 30d, Tempo 14d. Loki and Tempo retention is time-only, so shorten it if ingest grows or the Docker disk is small (see the runbook's "Disk full" row).

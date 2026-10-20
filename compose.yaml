@@ -144,6 +144,10 @@ services:
       # Code session is a new series). promql-extended-range-selectors (experimental): the
       # "anchored" range modifier, e.g. increase(x[$__range] anchored).
       - --enable-feature=exemplar-storage,created-timestamp-zero-ingestion,promql-extended-range-selectors
+      # Lookback > the collector's delta_to_cumulative max_stale (30m): agents send a series only when it
+      # changes, so after an idle gap the per-bucket increase() in the dashboard still finds the previous
+      # value instead of dropping the first increment.
+      - --query.lookback-delta=31m
     restart: unless-stopped
     depends_on:
       certs:
@@ -247,6 +251,7 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
       GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/claude-code.json   # land on it after login
       # Drilldown apps are not bundled in 13.2.x: they are fetched from grafana.com on
       # first start into grafana-data. Pinned, and auto-update off so core datasource
       # plugins stay at the versions shipped with the image.
@@ -257,6 +262,7 @@ services:
       - /tmp
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - grafana-data:/var/lib/grafana
       - tls:/etc/grafana/tls:ro
     healthcheck:

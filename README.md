@@ -83,19 +83,34 @@ This enables telemetry for every Claude Code user on the VM. Restart Claude Code
 ```sh
 claude -p hi
 ```
-Wait about a minute. In Grafana, open **Explore**, pick the **Prometheus** data source, switch the query editor from Builder to **Code**, enter `claude_code_session_count_total{host_name="<vm>"}` and click **Run query**. `<vm>` is the VM's `hostname -s`. At least one result means it works.
+Wait about a minute, then reload Grafana. The VM's `hostname -s` appears in the dashboard's **VM** filter, and **Sessions** counts the run.
 
 Nothing? See [Troubleshooting](runbook.md#troubleshooting). To test the connection without Claude Code, run the [smoke test](EXAMPLES.md#smoke-test).
+
+## View the data
+
+After login, Grafana shows the **Claude Code** dashboard.
+- Filter at the top with **VM**, **User**, **Environment** and **Model**. Pick the period at the top right; every total covers that period.
+- **Traces** and **Collector health** start collapsed; click a row title to open them.
+- Hover a panel's ⓘ to see what it counts.
+
+Beyond the dashboard:
+- **Drilldown → Logs / Metrics / Traces** in the left menu: browse every event, metric and trace without writing queries.
+- **Explore**: run your own queries. Examples are in [EXAMPLES.md](EXAMPLES.md#promql).
+
+To change the dashboard, edit `grafana/provisioning/dashboards/claude-code.json` on the server; Grafana loads it within a minute. For a personal copy, open it from **Dashboards → Agent telemetry** and use **Save as copy**.
 
 ## Next
 
 | I want to… | Go to |
 |---|---|
-| See sessions, cost and tokens per VM | [EXAMPLES.md](EXAMPLES.md#promql): paste into Grafana → Explore |
+| See sessions, cost and tokens per VM | The **Claude Code** dashboard: [View the data](#view-the-data) |
+| Write my own queries | [EXAMPLES.md](EXAMPLES.md) |
 | Stop or start the stack | `docker compose down` (keeps data) / `docker compose up -d --wait`, on the server |
 | Check the stack is healthy | [Health check](runbook.md#health-check) |
 | Fix 401, certificate or connection errors | [Troubleshooting](runbook.md#troubleshooting) |
 | Edit a config file | [Apply a change](runbook.md#apply-a-change) |
+| Get a newer version of this repo | On the server: `git pull`, then `docker compose up -d --wait --force-recreate` |
 | Rotate the token | [Rotate the OTLP token](runbook.md#rotate-the-otlp-token) |
 | Add a server name or IP | [Change TLS names](runbook.md#change-tls-names-or-renew-the-server-cert) |
 | Reset the Grafana password | [Reset the Grafana admin password](runbook.md#reset-the-grafana-admin-password) |

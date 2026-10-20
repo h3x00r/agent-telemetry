@@ -47,6 +47,10 @@ storage:
 
 # In-process wiring (these are the values -target=all auto-fills; setting them
 # explicitly only silences two startup warnings). Must match grpc_listen_port.
+query_frontend:
+  search:
+    max_duration: 0   # no cap on the search range (default 168h breaks dashboard ranges > 7d); retention bounds it
+
 querier:
   frontend_worker:
     frontend_address: 127.0.0.1:9095

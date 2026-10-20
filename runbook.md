@@ -57,8 +57,10 @@ Then apply the change. After applying, `docker compose ps -a` shows the service 
 | `otel-collector/config.yaml` | `docker compose restart otel-collector` | Resets delta→cumulative state; `increase()` treats it as a counter reset. |
 | `prometheus/prometheus.yml` | `docker compose kill -s SIGHUP prometheus` | `docker compose logs --since 1m prometheus` shows "Completed loading of configuration file". |
 | `loki/loki.yaml`, `tempo/tempo.yaml` | `docker compose restart loki` (or `tempo`) | The collector queues data while it is down. |
-| `grafana/provisioning/datasources/` | `docker compose restart grafana` | Only this folder is mounted; a new provisioning folder also needs a volume line in `compose.yaml`. |
+| `grafana/provisioning/datasources/` | `docker compose restart grafana` | Only `datasources/` and `dashboards/` are mounted; a new provisioning folder also needs a volume line in `compose.yaml`. |
+| `grafana/provisioning/dashboards/*.json` | Nothing | Grafana reloads it within a minute. |
 | `compose.yaml` (including command-line flags), `.env` | `docker compose up -d --wait` | Recreates changed services. `restart` keeps the old flags and `.env`. |
+| Several files, e.g. after `git pull` | `docker compose up -d --wait --force-recreate` | Recreates every service; data stays in the volumes. |
 
 ## Add an agent VM
 

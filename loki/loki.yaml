@@ -65,6 +65,7 @@ limits_config:
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
   max_query_series: 1000
+  max_query_length: 0           # no cap on the query range (default 30d1h breaks "Last 90 days"); retention bounds it
   # OTLP log attributes become structured metadata; the 64KB default rejects (drops) records
   # carrying large Claude Code event payloads with HTTP 400.
   max_structured_metadata_size: 256KB
