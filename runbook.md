@@ -27,7 +27,7 @@ A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the
 | `Hostname/IP does not match certificate's altnames` (Go: `certificate is valid for …, not …`) | Name not in `TLS_SANS` | Add it, then [re-issue](#change-tls-names-or-renew-the-server-cert). |
 | Connection refused or timeout | Stack down, DNS or firewall | Server: `docker compose ps -a`, `sudo iptables -nvL DOCKER-USER`. Agent VM: `getent hosts telemetry.lair.dev`. |
 | HTTP 400 `Client sent an HTTP request to an HTTPS server.` | `http://` endpoint | Use `https://`. |
-| Data has no `host_name` label | `host.name` not set | Add it to `OTEL_RESOURCE_ATTRIBUTES`. |
+| Data has no `host_name` label (Grok Build: `(none)` on its dashboard) | `host.name` not set | Add it to `OTEL_RESOURCE_ATTRIBUTES`. Grok Build ignores that: send the `X-Nexus-Host` and `X-Nexus-Persona` headers ([Grok Build](REFERENCE.md#agent-configuration-grok-build)). |
 | No traces from Claude Code | Beta tracing off | Set `OTEL_TRACES_EXPORTER=otlp` and `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. |
 | `claude_code.interaction` root span missing in `-p` runs | Client-side race | Known issue; nothing to fix on the server. |
 | `otelcol_exporter_queue_size` keeps growing | A backend is down or slow | `docker compose ps -a`; `docker compose logs <backend>`. The queue drains once the backend is back. |
@@ -75,6 +75,7 @@ Follow [README step 2](README.md#2-connect-an-agent-vm), then [step 3](README.md
 NEW='<NEW_TOKEN>'
 sed -i "s/Bearer [0-9a-f]*/Bearer $NEW/" /etc/claude-code/managed-settings.d/50-otel.json
 ```
+Grok Build: update the token in the persona's telemetry settings (`nexus --config`) or in `OTEL_EXPORTER_OTLP_METRICS_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` ([Grok Build](REFERENCE.md#agent-configuration-grok-build)), then restart grok.
 
 ## Change TLS names or renew the server cert
 

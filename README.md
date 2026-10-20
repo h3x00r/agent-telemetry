@@ -1,6 +1,6 @@
 # Agent telemetry
 
-Collects metrics, logs and traces from Claude Code (or any OpenTelemetry app) on many VMs into one server, and shows them in Grafana.
+Collects metrics, logs and traces from Claude Code and Grok Build (or any OpenTelemetry app) on many VMs into one server, and shows them in Grafana.
 
 ```
 agent VMs ──OTLP──▶ otel-collector ──▶ Prometheus (metrics) / Loki (logs) / Tempo (traces) ──▶ Grafana
@@ -83,7 +83,7 @@ This enables telemetry for every Claude Code user on the VM. Restart Claude Code
 ```sh
 claude -p hi
 ```
-Wait about a minute, then reload Grafana. The VM's `hostname -s` appears in the dashboard's **VM** filter, and **Sessions** counts the run.
+Wait about a minute, then reload Grafana. The VM's `hostname -s` appears in the **Claude Code** dashboard's **VM** filter, and **Sessions** counts the run.
 
 Nothing? See [Troubleshooting](runbook.md#troubleshooting). To test the connection without Claude Code, run the [smoke test](EXAMPLES.md#smoke-test).
 
@@ -94,17 +94,20 @@ After login, Grafana shows the **Claude Code** dashboard.
 - **Traces** and **Collector health** start collapsed; click a row title to open them.
 - Hover a panel's ⓘ to see what it counts.
 
-Beyond the dashboard:
+Grok Build has its own **Grok Build** dashboard, with filters for **VM**, **Persona**, **User** and **Model**; its **Startup** row starts collapsed. Switch between the two with the **Agent telemetry** menu at the top of either dashboard, or open them from **Dashboards → Agent telemetry**.
+
+Beyond the dashboards:
 - **Drilldown → Logs / Metrics / Traces** in the left menu: browse every event, metric and trace without writing queries.
 - **Explore**: run your own queries. Examples are in [EXAMPLES.md](EXAMPLES.md#promql).
 
-To change the dashboard, edit `grafana/provisioning/dashboards/claude-code.json` on the server; Grafana loads it within a minute. For a personal copy, open it from **Dashboards → Agent telemetry** and use **Save as copy**.
+To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on the server (`claude-code.json`, `grok-build.json`); Grafana loads it within a minute. For a personal copy, open it from **Dashboards → Agent telemetry** and use **Save as copy**.
 
 ## Next
 
 | I want to… | Go to |
 |---|---|
-| See sessions, cost and tokens per VM | The **Claude Code** dashboard: [View the data](#view-the-data) |
+| See Claude Code's sessions, cost and tokens per VM | The **Claude Code** dashboard: [View the data](#view-the-data) |
+| See Grok Build's cost, tokens and tools per VM and persona | The **Grok Build** dashboard: [View the data](#view-the-data) |
 | Write my own queries | [EXAMPLES.md](EXAMPLES.md) |
 | Stop or start the stack | `docker compose down` (keeps data) / `docker compose up -d --wait`, on the server |
 | Check the stack is healthy | [Health check](runbook.md#health-check) |

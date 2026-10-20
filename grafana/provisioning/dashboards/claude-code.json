@@ -19,7 +19,22 @@
   "timepicker": {},
   "timezone": "browser",
   "version": 1,
-  "links": [],
+  "links": [
+    {
+      "title": "Agent telemetry",
+      "type": "dashboards",
+      "tags": [
+        "otel"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": "",
+      "url": ""
+    }
+  ],
   "annotations": {
     "list": [
       {

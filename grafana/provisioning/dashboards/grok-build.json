@@ -1,0 +1,3980 @@
+{
+  "uid": "grok-build",
+  "title": "Grok Build",
+  "description": "Usage, cost, tokens, turns and tool activity reported by Grok Build agents, by VM and nexus persona.",
+  "tags": [
+    "grok-build",
+    "otel"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "version": 1,
+  "links": [
+    {
+      "title": "Agent telemetry",
+      "type": "dashboards",
+      "tags": [
+        "otel"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "VM",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "host.name of the agent VM (from the X-Nexus-Host header)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total, host_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total, host_name)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "persona",
+        "label": "Persona",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "nexus persona (from the X-Nexus-Persona header)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, persona)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, persona)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "user",
+        "label": "User",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Grok account",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\"}, user_email)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\"}, user_email)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Applies to every panel whose data has a model; Tool Decisions and Startup have none",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, model)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Sessions",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(count by (session_id) (last_over_time(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range])))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Distinct Grok Build sessions that used tokens in the period."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Turns",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_turn_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Turns that ended in the period, any outcome. A turn is one prompt and all the work it triggers.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Personas",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(count by (persona) (last_over_time(grok_code_token_usage_total{persona!=\"\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range])))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Distinct nexus personas with token usage. Data sent without the X-Nexus-Persona header has no persona and isn't counted."
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Users",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(count by (user_email) (last_over_time(grok_code_token_usage_total{user_email!=\"\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range])))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Distinct Grok accounts (user_email) with token usage."
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Total Cost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Cost reported by Grok Build.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Total Tokens",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=~\"input|output\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Input + output tokens. Grok Build counts cache reads inside input and reasoning inside output, so they aren't added again.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Tool Calls",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Tool executions, any outcome.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Failed Tool Calls",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_tool_usage_total{outcome!=\"success\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Tool executions whose outcome isn't success.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Tokens by Type",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"input\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) - (sum (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "uncached input"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "cache read"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"output\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) - (sum (increase(grok_code_token_usage_total{type=\"reasoning\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "output (excl. reasoning)"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"reasoning\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "reasoning"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uncached input"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache read"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "output (excl. reasoning)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reasoning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Token totals per type. Grok Build counts cache reads inside input and reasoning inside output, so uncached input + cache read + output (excl. reasoning) + reasoning = input + output.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Turn Outcomes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 5,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (increase(grok_code_turn_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "completed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Turns per outcome as Grok Build reports it, e.g. completed.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Tool Decisions",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 11,
+        "y": 6,
+        "w": 5,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (decision, permission_mode) (increase(grok_code_tool_decision_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{decision}} · {{permission_mode}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Tool permission decisions by decision and permission mode. always_approve = the agent runs every tool without asking; a decision other than allow is worth a look. Not filtered by Model: Grok Build doesn't label this metric with a model.",
+      "interval": "5m",
+      "maxDataPoints": 1000
+    },
+    {
+      "id": 13,
+      "type": "gauge",
+      "title": "Cache hit ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 6,
+        "w": 5,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) / sum (increase(grok_code_token_usage_total{type=\"input\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "noValue": "-",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto"
+      },
+      "description": "Share of input tokens served from the prompt cache: cache_read / input (Grok Build counts cache reads inside input). Higher is cheaper."
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Sessions without persona",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 6,
+        "w": 3,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(count by (session_id) (last_over_time(grok_code_token_usage_total{persona=\"\", user_email=~\"$user\", model=~\"$model\"}[$__range]))) or vector(0)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "orientation": "auto",
+        "showPercentChange": false
+      },
+      "description": "Sessions whose data arrived without the X-Nexus-Persona header (Grok Build started outside nexus, or the header not set). They count in the totals but under no persona. Ignores the VM and Persona filters."
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Leaderboards",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "bargauge",
+      "title": "Top Personas by Cost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(topk(10, label_replace(label_replace(sum by (host_name, persona) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{host_name}} · {{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "description": "Top 10 VM · persona pairs by cost."
+    },
+    {
+      "id": 17,
+      "type": "bargauge",
+      "title": "Top Users by Cost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 13,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(topk(10, label_replace(sum by (user_email) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"user_email\", \"(none)\", \"user_email\", \"\")))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{user_email}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "description": "Top 10 accounts by cost."
+    },
+    {
+      "id": 18,
+      "type": "bargauge",
+      "title": "Top Sessions by Cost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sort_desc(topk(10, label_replace(label_replace(sum by (session_id, host_name, persona) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{host_name}} · {{persona}} · {{session_id}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "sizing": "manual",
+        "minVizHeight": 16,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "description": "Top 10 sessions by cost. Search the session id in Explore → Loki for its events."
+    },
+    {
+      "id": 19,
+      "type": "piechart",
+      "title": "Cost share by Model",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (model) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": [],
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "description": "Share of cost per model."
+    },
+    {
+      "id": 20,
+      "type": "piechart",
+      "title": "Tool Calls by Tool",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tool_name) (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": [],
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "description": "Share of tool executions per tool."
+    },
+    {
+      "id": 21,
+      "type": "piechart",
+      "title": "Stop Reasons",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 20,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (stop_reason) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | stop_reason!=\"\" [$__range]))",
+          "editorMode": "code",
+          "queryType": "instant",
+          "legendFormat": "{{stop_reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": [],
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "description": "Why each model API call stopped, e.g. toolcalls = the model asked for tools, stop = it finished. API calls are the events that carry a stop_reason."
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Usage by VM and persona",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(count by (host_name, persona, user_email) (count by (host_name, persona, user_email, session_id) (last_over_time(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range]))), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_turn_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_token_usage_total{type=~\"input|output\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_tool_usage_total{outcome!=\"success\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) / (sum by (host_name, persona, user_email) (increase(grok_code_token_usage_total{type=\"input\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) > 0), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(sum by (host_name, persona, user_email) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) / (sum by (host_name, persona, user_email) (increase(grok_code_turn_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) > 0), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace((max by (host_name, persona, user_email) (timestamp({__name__=~\"grok_code_(token_usage|turn_count|cost_usage_USD)_total\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"})) or max by (host_name, persona, user_email) (max_over_time(timestamp({__name__=~\"grok_code_(token_usage|turn_count|cost_usage_USD)_total\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"})[$__range:5m]))) * 1000, \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\"), \"user_email\", \"(none)\", \"user_email\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "noValue": "0"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "fieldMinMax",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "fieldMinMax",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sessions"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turns"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tool calls"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed tool calls"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cache hit"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost / turn"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": [
+            "Sessions",
+            "Turns",
+            "Cost",
+            "Tokens",
+            "Tool calls",
+            "Failed tool calls"
+          ]
+        }
+      },
+      "description": "One row per VM, persona and account. Tokens = input + output. Cache hit = cache_read / input. Failed tool calls = tool executions whose outcome isn't success. Click a column header to sort.",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "host_name": "VM",
+              "persona": "Persona",
+              "user_email": "User",
+              "Value #A": "Sessions",
+              "Value #B": "Turns",
+              "Value #C": "Cost",
+              "Value #D": "Tokens",
+              "Value #E": "Tool calls",
+              "Value #G": "Failed tool calls",
+              "Value #H": "Cache hit",
+              "Value #I": "Cost / turn",
+              "Value #F": "Last seen"
+            },
+            "indexByName": {
+              "host_name": 0,
+              "persona": 1,
+              "user_email": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #G": 8,
+              "Value #H": 9,
+              "Value #I": 10,
+              "Value #F": 11
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Cost",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Grok Build versions",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(count by (host_name, persona, service_version) (count by (host_name, persona, service_version, session_id) (last_over_time(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range]))), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "noValue": "0"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sessions"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "description": "Grok Build version each VM and persona ran in the period, with its number of sessions. Two rows for one persona means it changed version in the period.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "host_name": "VM",
+              "persona": "Persona",
+              "service_version": "Version",
+              "Value": "Sessions",
+              "Value #A": "Sessions"
+            },
+            "indexByName": {
+              "host_name": 0,
+              "persona": 1,
+              "service_version": 2,
+              "Value": 3,
+              "Value #A": 3
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "VM",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Cost & Tokens",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Cost by Persona",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(sum by (persona) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Cost per hour, stacked by persona. Legend total = cost in the whole-hour buckets shown.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Cost by Model",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 43,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (model) (increase(grok_code_cost_usage_USD_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Cost per hour, stacked by model.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Token Usage by Type",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"input\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) - (sum (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "uncached input"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"cache_read\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "cache read"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"output\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) - (sum (increase(grok_code_token_usage_total{type=\"reasoning\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) or vector(0))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "output (excl. reasoning)"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_token_usage_total{type=\"reasoning\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "reasoning"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uncached input"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache read"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "output (excl. reasoning)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reasoning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Tokens per hour, stacked by type. Grok Build counts cache reads inside input and reasoning inside output, so uncached input + cache read + output (excl. reasoning) + reasoning = input + output.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Token Usage by Persona",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 53,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(sum by (persona) (increase(grok_code_token_usage_total{type=~\"input|output\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Input + output tokens per hour, stacked by persona.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Context size per API call",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace(label_replace(max_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | stop_reason!=\"\" | unwrap input_tokens [$__auto] offset -$__auto) by (host_name, persona), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{host_name}} · {{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "barAlignment": 1,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Largest prompt sent to the model in each bucket: input_tokens of one API call, cache reads included. It grows with the conversation, and so does the cost of every call, until the session restarts. API calls are the events that carry a stop_reason.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Activity",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 71,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Turns by Outcome (per hour)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (increase(grok_code_turn_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "completed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Turns that ended per hour, stacked by outcome.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Active Sessions by VM (per hour)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 72,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(count by (host_name) (sum by (host_name, session_id) (increase(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) > 0), \"host_name\", \"(none)\", \"host_name\", \"\")",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{host_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Sessions that used tokens in each hour, stacked by VM. A session spanning several hours counts in each. Legend max = busiest hour.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Tool Calls by Tool (per hour)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 81,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (tool_name) (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Tool executions per hour, stacked by tool.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 34,
+      "type": "state-timeline",
+      "title": "When each persona was active",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 81,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(label_replace(sum by (host_name, persona) (increase(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) > 0, \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{host_name}} · {{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": null,
+                "result": {
+                  "text": "active",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "description": "Green where the persona used tokens in that 5-minute bucket (or wider on long ranges).",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 35,
+      "type": "row",
+      "title": "Latency",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 90,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Turn latency: TTFT / TTFM",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 91,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_turn_ttft_milliseconds_sum{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) / sum (increase(grok_code_turn_ttft_milliseconds_count{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TTFT mean"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(grok_code_turn_ttft_milliseconds_bucket{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TTFT p95"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(grok_code_turn_ttfm_milliseconds_sum{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)) / sum (increase(grok_code_turn_ttfm_milliseconds_count{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TTFM mean"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(grok_code_turn_ttfm_milliseconds_bucket{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval)))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "TTFM p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "barAlignment": 1,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Per turn: TTFT = time to first token. TTFM is Grok Build's turn.ttfm timer, which Grok Build doesn't document. Solid = mean, dashed = p95. p95 is interpolated inside the histogram's buckets (… 1000, 2500, 5000, 10000 … ms), so with few samples per bucket it can be off by up to a bucket width; the mean is exact.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "API latency p50 / p95",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 91,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.95, {service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | stop_reason!=\"\" | unwrap duration_ms [$__auto] offset -$__auto) by (model)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "p95 {{model}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.50, {service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | stop_reason!=\"\" | unwrap duration_ms [$__auto] offset -$__auto) by (model)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "p50 {{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "barAlignment": 1,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Duration of each model API call. API calls are the events that carry a stop_reason. Solid p95, dashed p50.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Turn duration p50 / p95",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 91,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.95, {service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | tool_call_count!=\"\" | duration_ms!=\"\" | unwrap duration_ms [$__auto] offset -$__auto) by (model)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "p95 {{model}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.50, {service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | tool_call_count!=\"\" | duration_ms!=\"\" | unwrap duration_ms [$__auto] offset -$__auto) by (model)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "p50 {{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "barAlignment": 1,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "End-to-end time of each turn, including its tool calls. Turn ends are the events that carry tool_call_count and duration_ms. Solid p95, dashed p50.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 39,
+      "type": "row",
+      "title": "Events & tools",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 99,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "API calls by model",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (model) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | stop_reason!=\"\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Model API calls per time bucket. API calls are the events that carry a stop_reason.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Prompts by persona",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace(label_replace(sum by (host_name, persona) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | prompt_length!=\"\" [$__auto] offset -$__auto)), \"host_name\", \"(none)\", \"host_name\", \"\"), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{host_name}} · {{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "User prompts per time bucket. Prompts are the events that carry a prompt_length.",
+      "interval": "5m",
+      "maxDataPoints": 300
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Errors by category (per hour)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 100,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_category) (increase(grok_code_error_count_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__interval] anchored offset -$__interval))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{error_category}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "barAlignment": 1,
+            "showPoints": "never",
+            "pointSize": 6,
+            "spanNulls": false,
+            "insertNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisBorderShow": false,
+            "lineInterpolation": "stepAfter"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "decimals": 0,
+          "noValue": "None reported by Grok Build"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "Errors counted by Grok Build per hour, by error_category (grok_code.error.count). Failed tool calls are counted separately, in the Overview and the log panel below.",
+      "interval": "1h",
+      "maxDataPoints": 2200
+    },
+    {
+      "id": 43,
+      "type": "bargauge",
+      "title": "Tool success rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 108,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum by (tool_name) (increase(grok_code_tool_usage_total{outcome=\"success\", host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) or sum by (tool_name) (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored)) * 0) / sum by (tool_name) (increase(grok_code_tool_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\", model=~\"$model\"}[$__range] anchored))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          },
+          "decimals": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "sizing": "manual",
+        "minVizHeight": 16,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "description": "Share of tool executions that succeeded."
+    },
+    {
+      "id": 44,
+      "type": "bargauge",
+      "title": "Tool duration p95 by tool",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 108,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sort_desc(quantile_over_time(0.95, {service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | tool_name!=\"\" | duration_ms!=\"\" | unwrap duration_ms [$__range]) by (tool_name))",
+          "editorMode": "code",
+          "queryType": "instant",
+          "legendFormat": "{{tool_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "namePlacement": "left",
+        "sizing": "manual",
+        "minVizHeight": 16,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      },
+      "description": "95th percentile run time per tool. Tool results are the events that carry tool_name and duration_ms."
+    },
+    {
+      "id": 45,
+      "type": "logs",
+      "title": "Failed tool calls, cancelled turns and errors",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 116,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | outcome=~\"error|cancelled\" or error_category!=\"\" | line_format `{{ .host_name | default \"(none)\" }}  {{ .persona | default \"(none)\" }}  {{.model}}{{ with .tool_name }}  {{.}}{{ end }}  {{.outcome}}{{ with .error_category }}  {{.}}{{ end }}{{ if .duration_ms }}  {{.duration_ms}}ms{{ end }}`",
+          "editorMode": "code",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No failed tool calls, cancelled turns or errors"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "description": "Tool results and turn ends whose outcome is error or cancelled, and events that carry an error_category. Newest first. Click a line for all its fields (session_id, tool_name, outcome, ...)."
+    },
+    {
+      "id": 46,
+      "type": "row",
+      "title": "Startup",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 124,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 47,
+          "type": "timeseries",
+          "title": "Startup time",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 125,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum (increase(grok_code_startup_total_milliseconds_sum{host_name=~\"$host\", persona=~\"$persona\"}[$__interval] anchored offset -$__interval)) / sum (increase(grok_code_startup_total_milliseconds_count{host_name=~\"$host\", persona=~\"$persona\"}[$__interval] anchored offset -$__interval))",
+              "editorMode": "code",
+              "instant": false,
+              "range": true,
+              "legendFormat": "mean"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "histogram_quantile(0.95, sum by (le) (increase(grok_code_startup_total_milliseconds_bucket{host_name=~\"$host\", persona=~\"$persona\"}[$__interval] anchored offset -$__interval)))",
+              "editorMode": "code",
+              "instant": false,
+              "range": true,
+              "legendFormat": "p95"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "barAlignment": 1,
+                "showPoints": "always",
+                "pointSize": 6,
+                "spanNulls": false,
+                "insertNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisBorderShow": false,
+                "lineInterpolation": "stepAfter"
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "noValue": "No startup data for this VM / persona"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "B"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "description": "Time from launch until Grok Build is ready. Solid = mean, dashed = p95. p95 is interpolated inside the histogram's buckets (… 1000, 2500, 5000, 10000 … ms), so with few samples per bucket it can be off by up to a bucket width; the mean is exact. Only launches that report it count (so far, headless grok -p runs). Startup metrics carry no user or model, and launches sent without the nexus headers carry no VM or persona, so those show only under All.",
+          "interval": "5m",
+          "maxDataPoints": 300
+        },
+        {
+          "id": 48,
+          "type": "bargauge",
+          "title": "Startup phases (average)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 125,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sort_desc(sum by (phase) (increase(grok_code_startup_phase_duration_milliseconds_sum{host_name=~\"$host\", persona=~\"$persona\"}[$__range] anchored)) / sum by (phase) (increase(grok_code_startup_phase_duration_milliseconds_count{host_name=~\"$host\", persona=~\"$persona\"}[$__range] anchored)))",
+              "editorMode": "code",
+              "instant": true,
+              "range": false,
+              "legendFormat": "{{phase}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "blue"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "noValue": "No startup data for this VM / persona"
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "lcd",
+            "valueMode": "color",
+            "showUnfilled": true,
+            "namePlacement": "left",
+            "sizing": "manual",
+            "minVizHeight": 16,
+            "maxVizHeight": 36,
+            "legend": {
+              "showLegend": false
+            },
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "description": "Average time per startup phase over the period. Only launches that report it count (so far, headless grok -p runs). Startup metrics carry no user or model, and launches sent without the nexus headers carry no VM or persona, so those show only under All."
+        }
+      ]
+    }
+  ]
+}

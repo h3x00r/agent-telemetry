@@ -36,7 +36,7 @@ docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt   # exp
 `.env` holds the OTLP bearer token, the TLS SANs, the Grafana admin login and Grafana's encryption keys. Back it up, and never change the Grafana keys once Grafana stores secrets.
 
 - The admin credentials apply only on the first start with an empty `grafana-data` volume. After that, see [Reset the Grafana admin password](runbook.md#reset-the-grafana-admin-password).
-- The **Claude Code** dashboard comes from `grafana/provisioning/dashboards/claude-code.json` and is the home page. It can't be saved from the UI: edit the file (Grafana reloads it within a minute), or open it from **Dashboards → Agent telemetry** and use **Save as copy**. Other `*.json` files in that folder load too.
+- The **Claude Code** dashboard comes from `grafana/provisioning/dashboards/claude-code.json` and is the home page. The **Grok Build** dashboard comes from `grok-build.json` in the same folder. Neither can be saved from the UI: edit the file (Grafana reloads it within a minute), or open it from **Dashboards → Agent telemetry** and use **Save as copy**. Other `*.json` files in that folder load too.
 - Grafana is HTTPS only; plain http returns 400. To avoid the browser warning, import `otel-ca.crt` as a trusted CA.
 - On first start, Grafana downloads the pinned Drilldown apps (Logs, Traces, Metrics) from grafana.com. That needs outbound HTTPS once; after that they live in the `grafana-data` volume.
 
@@ -106,15 +106,22 @@ export OTEL_EXPORTER_OTLP_METRICS_HEADERS="$H" OTEL_EXPORTER_OTLP_LOGS_HEADERS="
   and tracing in the same shell don't pick it up.
 - grok trusts the CA through `OTEL_EXPORTER_OTLP_CERTIFICATE`, added to its usual ones. Not `SSL_CERT_FILE`: that
   replaces grok's trust store for its own API calls too.
-- Its metrics are `grok_code_*`, e.g. `grok_code_session_count_total` and `grok_code_token_usage_total` (no
-  `_tokens` in the name, unlike Claude Code's). The **Claude Code** dashboard doesn't show them; queries:
+- Its metrics are `grok_code_*`, e.g. `grok_code_token_usage_total` and `grok_code_cost_usage_USD_total` (no
+  `_tokens` in the name, unlike Claude Code's). The **Grok Build** dashboard shows them; more queries:
   [EXAMPLES.md](EXAMPLES.md#promql).
+- Token types overlap, unlike Claude Code's: `input` includes `cache_read`, and `output` includes `reasoning`
+  (checked against the cost grok reports). Total tokens = `input` + `output`; cache hit ratio = `cache_read` / `input`.
+- `grok_code_session_count_total` carries only `session_id` from grok (no user or model), and not every session sends
+  it. To count sessions, count distinct `session_id` on `grok_code_token_usage_total`.
+- grok's events have no `event_name` and an empty body. The dashboard tells them apart by the fields only one kind
+  has: `stop_reason` for model API calls, `prompt_length` for prompts, `tool_call_count` with `duration_ms` for turn
+  ends, `tool_name` with `duration_ms` for tool results.
 - A failed export is silent. To see why: `RUST_LOG=debug GROK_LOG_FILE=/tmp/g.log grok -p hi`, then
   `grep "export health" /tmp/g.log` (`export_failures=0 export_successes=2` is good).
 
 ## Querying
 
-Every Claude Code session is a new set of series, so use the `anchored` range modifier. Plain `increase()`/`rate()` extrapolate short series, e.g. 1.5 sessions for 1.
+Every Claude Code or Grok Build session is a new set of series, so use the `anchored` range modifier. Plain `increase()`/`rate()` extrapolate short series, e.g. 1.5 sessions for 1.
 
 Loki index labels are `service_name`, `service_namespace`, `deployment_environment(_name)` and `host_name`. Everything else (`event_name`, `session_id`, `trace_id`, ...) is structured metadata. Grafana links between signals: trace → logs, log `trace_id` → trace, exemplars → trace, plus the service map from Tempo span metrics.
 

@@ -80,9 +80,10 @@ sum by (host_name) (increase(claude_code_active_time_seconds_total[$__range] anc
 # Claude Code versions seen per VM in the last day
 count by (host_name, service_version) (last_over_time(claude_code_session_count_total[1d]))
 
-# Grok Build: sessions per VM and persona, tokens per persona and type
-sum by (host_name, persona) (increase(grok_code_session_count_total[$__range] anchored))
-sum by (persona, type) (increase(grok_code_token_usage_total[$__range] anchored))
+# Grok Build: sessions per VM and persona, total tokens (input + output) and cost per persona
+count by (host_name, persona) (count by (host_name, persona, session_id) (last_over_time(grok_code_token_usage_total[$__range])))
+sum by (persona) (increase(grok_code_token_usage_total{type=~"input|output"}[$__range] anchored))
+sum by (persona) (increase(grok_code_cost_usage_USD_total[$__range] anchored))
 ```
 
 Collector health (`job="otel-collector"`):
@@ -109,6 +110,7 @@ Only these labels go inside `{...}`: `service_name`, `service_namespace`, `deplo
 {service_name="claude-code"} | event_name="tool_result" | success="false"
 {service_name="claude-code"} | session_id="<session-id>"
 {service_name="grok-cli", host_name="<vm>"} | persona="<persona>"
+{service_name="grok-cli"} | stop_reason!=""      # Grok Build model API calls (its events have no event_name)
 
 # Cost per VM and model, API p95 latency per model, tool calls per tool
 sum by (host_name, model) (sum_over_time({service_name="claude-code"} | event_name="api_request" | unwrap cost_usd [$__range]))
