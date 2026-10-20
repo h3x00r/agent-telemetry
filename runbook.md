@@ -1,8 +1,8 @@
 # Runbook
 
-Architecture, ports and limits: [README.md](README.md). Test payloads and queries: [EXAMPLES.md](EXAMPLES.md).
+Day-to-day procedures. First-time setup: [README.md](README.md). Ports, TLS and limits: [REFERENCE.md](REFERENCE.md). Queries: [EXAMPLES.md](EXAMPLES.md).
 
-The examples use `telemetry.lair.dev` / `192.0.2.10` for the stack host. Run every command **on the stack host, in the repo directory (the one with `compose.yaml`)**, unless the step says **(agent VM)**.
+The examples use `telemetry.lair.dev` / `192.0.2.10` for the stack host. Run every command **on the stack host, in the repo directory (the one with `compose.yaml`)**, unless the step says it runs on an agent VM.
 
 ## Health check
 
@@ -15,6 +15,7 @@ docker system df -v | grep -E '^otel_'                    # volume sizes
 df -h "$(docker info -f '{{.DockerRootDir}}')"            # free space on the Docker disk
 docker compose logs --since 1h otel-collector | grep -iE 'error|warn'   # expect nothing
 ```
+A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the cause, then `docker compose up -d --wait`.
 
 ## Troubleshooting
 
@@ -24,7 +25,7 @@ docker compose logs --since 1h otel-collector | grep -iE 'error|warn'   # expect
 | `unable to verify the first certificate` (Claude Code) | CA not trusted | Set `NODE_EXTRA_CA_CERTS=/etc/otel/otel-ca.crt`. Claude Code ignores `OTEL_EXPORTER_OTLP_CERTIFICATE`. |
 | `Setting the TLS ServerName to an IP address is not permitted` | gRPC to an IP | Use a name from `TLS_SANS`, or `http/protobuf`. |
 | `Hostname/IP does not match certificate's altnames` (Go: `certificate is valid for …, not …`) | Name not in `TLS_SANS` | Add it, then [re-issue](#change-tls-names-or-renew-the-server-cert). |
-| Connection refused or timeout | Stack down, DNS or firewall | `docker compose ps -a`; on the agent `getent hosts telemetry.lair.dev`; `sudo iptables -nvL DOCKER-USER`. |
+| Connection refused or timeout | Stack down, DNS or firewall | Server: `docker compose ps -a`, `sudo iptables -nvL DOCKER-USER`. Agent VM: `getent hosts telemetry.lair.dev`. |
 | HTTP 400 `Client sent an HTTP request to an HTTPS server.` | `http://` endpoint | Use `https://`. |
 | Data has no `host_name` label | `host.name` not set | Add it to `OTEL_RESOURCE_ATTRIBUTES`. |
 | No traces from Claude Code | Beta tracing off | Set `OTEL_TRACES_EXPORTER=otlp` and `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. |
@@ -56,49 +57,22 @@ Then apply the change. After applying, `docker compose ps -a` shows the service 
 | `otel-collector/config.yaml` | `docker compose restart otel-collector` | Resets delta→cumulative state; `increase()` treats it as a counter reset. |
 | `prometheus/prometheus.yml` | `docker compose kill -s SIGHUP prometheus` | `docker compose logs --since 1m prometheus` shows "Completed loading of configuration file". |
 | `loki/loki.yaml`, `tempo/tempo.yaml` | `docker compose restart loki` (or `tempo`) | The collector queues data while it is down. |
-| `grafana/provisioning/` | `docker compose restart grafana` | |
+| `grafana/provisioning/datasources/` | `docker compose restart grafana` | Only this folder is mounted; a new provisioning folder also needs a volume line in `compose.yaml`. |
 | `compose.yaml` (including command-line flags), `.env` | `docker compose up -d --wait` | Recreates changed services. `restart` keeps the old flags and `.env`. |
 
 ## Add an agent VM
 
-1. Export the CA, read the token, and copy the CA to the VM:
-```sh
-docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt
-grep ^OTLP_BEARER_TOKEN= .env
-scp otel-ca.crt <vm>:
-```
-
-2. **(agent VM, as root, in the directory holding `otel-ca.crt`)** Install the CA and the Claude Code settings. The endpoint can also be `https://192.0.2.10:4318`.
-```sh
-TOKEN='<OTLP_BEARER_TOKEN>'
-install -D -m 0644 otel-ca.crt /etc/otel/otel-ca.crt
-install -d /etc/claude-code/managed-settings.d
-cat > /etc/claude-code/managed-settings.d/50-otel.json <<EOF
-{
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-    "OTEL_METRICS_EXPORTER": "otlp",
-    "OTEL_LOGS_EXPORTER": "otlp",
-    "OTEL_TRACES_EXPORTER": "otlp",
-    "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
-    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://telemetry.lair.dev:4318",
-    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer $TOKEN",
-    "NODE_EXTRA_CA_CERTS": "/etc/otel/otel-ca.crt",
-    "OTEL_RESOURCE_ATTRIBUTES": "host.name=$(hostname -s),deployment.environment.name=prod"
-  }
-}
-EOF
-```
-
-3. **(agent VM)** Run the [smoke test](EXAMPLES.md#smoke-test). Expect three `200` responses.
-4. **(agent VM)** Run `claude -p hi`. Within about a minute, Grafana → Explore → Prometheus `claude_code_session_count_total{host_name="<vm>"}` shows a series. `<vm>` is the VM's `hostname -s`.
+Follow [README step 2](README.md#2-connect-an-agent-vm), then [step 3](README.md#3-check-that-data-arrives).
 
 ## Rotate the OTLP token
 
 1. Generate a token: `docker compose run --rm -T --no-deps certs openssl rand -hex 32`
 2. Set `OTLP_BEARER_TOKEN` in `.env`, then run `docker compose up -d --wait otel-collector`.
-3. On every agent, update `OTEL_EXPORTER_OTLP_HEADERS` (e.g. in `/etc/claude-code/managed-settings.d/50-otel.json`) and restart running sessions. Until then, those agents get 401 and their data is dropped.
+3. **On every agent VM, as root**, then restart running Claude Code sessions. Until then, those agents get 401 and their data is dropped.
+```sh
+NEW='<NEW_TOKEN>'
+sed -i "s/Bearer [0-9a-f]*/Bearer $NEW/" /etc/claude-code/managed-settings.d/50-otel.json
+```
 
 ## Change TLS names or renew the server cert
 
@@ -127,10 +101,13 @@ done
 docker compose up -d --wait
 ```
 
-Restore. **This deletes all current data, including the collector queue.** On a new host, copy `$B/.env` into the repo directory first.
+Restore. On a new host, copy `$B/.env` into the repo directory first. Pick the backup (edit the date):
 ```sh
-B=~/otel-backup/<YYYY-MM-DD>
-ls "$B"/*.tgz            # must list 6 files; stop here if not
+B=~/otel-backup/YYYY-MM-DD
+ls "$B"/*.tgz            # must list 6 files
+```
+Continue only if it lists 6 files. In the same shell, run the block below. **It deletes all current data, including the collector queue.**
+```sh
 docker compose down -v
 docker compose create
 for v in prometheus-data loki-data tempo-data grafana-data tls-ca tls; do
@@ -150,4 +127,4 @@ To roll back, restore the old tag and run `docker compose up -d --wait`. If the 
 
 ## Wipe everything
 
-**Destructive.** [Back up](#back-up-and-restore) first. `docker compose down -v` deletes all data, the collector queue **and the CA**. After `docker compose up -d --wait`, export the new CA ([Add an agent VM](#add-an-agent-vm), step 1) and give it to every agent and browser. The Grafana admin login reverts to the `.env` values.
+**Destructive.** [Back up](#back-up-and-restore) first. `docker compose down -v` deletes all data, the collector queue **and the CA**. After `docker compose up -d --wait`, export the new CA with `docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt` and install it on every agent ([README step 2](README.md#2-connect-an-agent-vm)) and browser. The Grafana admin login reverts to the `.env` values.

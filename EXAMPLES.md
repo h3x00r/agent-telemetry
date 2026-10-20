@@ -1,10 +1,10 @@
 # Examples
 
-The stack host is `telemetry.lair.dev` / `192.0.2.10`; replace both with your own. To boot the stack, see [README.md](README.md#boot-up). `<UPPER_CASE>` placeholders are values from `.env`, and `<vm>` is the agent VM's `hostname -s`. Procedures: [runbook.md](runbook.md).
+Test payloads and queries. Paste PromQL, LogQL and TraceQL into Grafana → Explore with the matching data source. `<UPPER_CASE>` values come from the server's `.env`, `<vm>` is the agent VM's `hostname -s`, and `telemetry.lair.dev` / `192.0.2.10` stand for your server.
 
 ## Smoke test
 
-Run on an agent VM that has the CA at `/etc/otel/otel-ca.crt` ([runbook](runbook.md#add-an-agent-vm)). The script sends one metric, one log record and one span. Expect `{"partialSuccess":{}} 200` three times. `OTLP` can also be `https://192.0.2.10:4318`.
+Run on an agent VM that has the CA at `/etc/otel/otel-ca.crt` ([README step 2](README.md#2-connect-an-agent-vm)). The script sends one metric, one log record and one span. Expect `{"partialSuccess":{}} 200` three times. `OTLP` can also be `https://192.0.2.10:4318`.
 
 ```sh
 OTLP=https://telemetry.lair.dev:4318; TOKEN='<OTLP_BEARER_TOKEN>'; CA=/etc/otel/otel-ca.crt
@@ -25,7 +25,7 @@ Then check in Grafana → Explore, last 15 minutes:
 
 ## Query from a shell
 
-Prometheus, Loki and Tempo are not published, so go through Grafana's datasource proxy. This works from anywhere that has `otel-ca.crt` ([runbook](runbook.md#add-an-agent-vm), step 1). To use a service-account token, replace `-u "$AUTH"` with `-H "Authorization: Bearer <sa-token>"`.
+Prometheus, Loki and Tempo are not published, so go through Grafana's datasource proxy. This works from anywhere that has `otel-ca.crt` (on the server: `docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt`). To use a service-account token, replace `-u "$AUTH"` with `-H "Authorization: Bearer <sa-token>"`.
 
 ```sh
 G=https://telemetry.lair.dev:3000; AUTH='<GRAFANA_ADMIN_USER>:<GRAFANA_ADMIN_PASSWORD>'; CA=./otel-ca.crt
@@ -59,7 +59,7 @@ opentelemetry-instrument --metrics_exporter otlp --logs_exporter otlp --traces_e
 
 ## PromQL
 
-`$__range` is the dashboard time range; outside Grafana, use a fixed range such as `[1d]`. Keep `anchored` ([why](README.md#querying)).
+`$__range` is the dashboard time range; outside Grafana, use a fixed range such as `[1d]`. Keep `anchored` ([why](REFERENCE.md#querying)).
 ```promql
 # Sessions, cost (USD) and tokens per VM / model / type
 sum by (host_name) (increase(claude_code_session_count_total[$__range] anchored))
