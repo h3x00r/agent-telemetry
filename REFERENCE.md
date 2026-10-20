@@ -82,6 +82,36 @@ export OTEL_RESOURCE_ATTRIBUTES="host.name=$(hostname -s),deployment.environment
 
 Any other OTel SDK works too: see [EXAMPLES.md](EXAMPLES.md#other-otel-sdks).
 
+## Agent configuration (Grok Build)
+
+Grok Build (`grok`) sends metrics and events (OTLP logs), no traces. A nexus persona gets it from `nexus --config`
+(its telemetry action). By hand, set the same in the environment grok starts in:
+```sh
+export GROK_EXTERNAL_OTEL=1
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://telemetry.lair.dev:4318
+export OTEL_EXPORTER_OTLP_CERTIFICATE=/etc/otel/otel-ca.crt
+H="Authorization=Bearer <OTLP_BEARER_TOKEN>,X-Nexus-Host=$(hostname -s),X-Nexus-Persona=<name>"
+export OTEL_EXPORTER_OTLP_METRICS_HEADERS="$H" OTEL_EXPORTER_OTLP_LOGS_HEADERS="$H"
+```
+
+- grok ignores `OTEL_RESOURCE_ATTRIBUTES`. The collector takes the VM and persona from the `X-Nexus-Host` and
+  `X-Nexus-Persona` headers instead (`resource/nexus` and `attributes/nexus` in `otel-collector/config.yaml`):
+  `host.name` on the resource, so the label `host_name` in Prometheus and Loki; `persona` on each datapoint and
+  event, so a Prometheus label, and in Loki a field to filter on (`| persona="<name>"`). Only where they are
+  missing, so Claude Code's own values stand. Without the headers, grok's data has neither.
+- The token goes in the per-signal headers, not `OTEL_EXPORTER_OTLP_HEADERS` (grok reads both), so docker compose
+  and tracing in the same shell don't pick it up.
+- grok trusts the CA through `OTEL_EXPORTER_OTLP_CERTIFICATE`, added to its usual ones. Not `SSL_CERT_FILE`: that
+  replaces grok's trust store for its own API calls too.
+- Its metrics are `grok_code_*`, e.g. `grok_code_session_count_total` and `grok_code_token_usage_total` (no
+  `_tokens` in the name, unlike Claude Code's). The **Claude Code** dashboard doesn't show them; queries:
+  [EXAMPLES.md](EXAMPLES.md#promql).
+- A failed export is silent. To see why: `RUST_LOG=debug GROK_LOG_FILE=/tmp/g.log grok -p hi`, then
+  `grep "export health" /tmp/g.log` (`export_failures=0 export_successes=2` is good).
+
 ## Querying
 
 Every Claude Code session is a new set of series, so use the `anchored` range modifier. Plain `increase()`/`rate()` extrapolate short series, e.g. 1.5 sessions for 1.

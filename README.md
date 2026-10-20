@@ -115,5 +115,6 @@ To change the dashboard, edit `grafana/provisioning/dashboards/claude-code.json`
 | Add a server name or IP | [Change TLS names](runbook.md#change-tls-names-or-renew-the-server-cert) |
 | Reset the Grafana password | [Reset the Grafana admin password](runbook.md#reset-the-grafana-admin-password) |
 | Back up, upgrade, wipe | [Back up and restore](runbook.md#back-up-and-restore) |
+| Send Grok Build's data, labelled by VM and persona | [Agent configuration (Grok Build)](REFERENCE.md#agent-configuration-grok-build) |
 | Send data from another app (Python, Node.js…) | [Other OTel SDKs](EXAMPLES.md#other-otel-sdks) |
 | Ports, TLS, limits, how it works | [REFERENCE.md](REFERENCE.md) |
