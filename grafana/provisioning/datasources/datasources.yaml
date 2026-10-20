@@ -1,0 +1,100 @@
+# Grafana 13.2.3 datasource provisioning.
+# NOTE: Grafana expands $VAR / ${VAR} in provisioning files from the environment.
+#       Literal Grafana template variables must therefore be escaped as $$ (e.g. $${__value.raw}, $$__tags).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      timeInterval: 60s       # >= slowest OTLP push interval (Claude Code exports metrics every 60s)
+      exemplarTraceIdDestinations:
+        # Exemplars pushed via OTLP (SDK exemplars) carry trace_id / span_id.
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: View trace
+        # Exemplars remote-written by Tempo's metrics-generator (span metrics, service graph) carry traceID.
+        - name: traceID
+          datasourceUid: tempo
+          urlDisplayLabel: View trace
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: "1000"
+      derivedFields:
+        # OTLP-ingested logs carry trace_id as structured metadata, which Grafana exposes as a label.
+        - name: TraceID
+          matcherType: label
+          matcherRegex: ^trace_id$
+          datasourceUid: tempo
+          url: $${__value.raw}
+          urlDisplayLabel: View trace
+        # Fallback for logs that embed the trace id in the log line itself.
+        - name: TraceIDInLine
+          matcherType: regex
+          matcherRegex: '(?:trace_?id|traceID)[=:"\s]+"?([0-9a-fA-F]{32})'
+          datasourceUid: tempo
+          url: $${__value.raw}
+          urlDisplayLabel: View trace
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: false
+    editable: false
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: false
+        tags:
+          - key: service.name
+            value: service_name
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: Request rate
+            query: sum by (span_name) (rate(traces_spanmetrics_calls_total{$$__tags}[5m]))
+          - name: Error rate
+            query: sum by (span_name) (rate(traces_spanmetrics_calls_total{$$__tags, status_code="STATUS_CODE_ERROR"}[5m]))
+          - name: p95 latency
+            query: histogram_quantile(0.95, sum by (le, span_name) (rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])))
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: -30m
+        spanEndTimeShift: 30m
+      spanBar:
+        type: Duration
+      streamingEnabled:
+        search: true
+        metrics: true
+

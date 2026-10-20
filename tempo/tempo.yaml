@@ -1,0 +1,79 @@
+# Grafana Tempo 3.1.0 - monolithic mode (-target=all), local filesystem storage.
+# Tempo 3.x monolithic needs NO Kafka and NO object store: the distributor pushes
+# in-process to the live-store and metrics-generator, the live-store flushes
+# blocks to the local backend, and backend-scheduler/backend-worker (in-process)
+# replace the 2.x compactor for compaction + retention.
+# Everything persistent lives under /var/tempo (one named volume).
+
+# Lets Grafana use streaming (HTTP/2 gRPC-over-HTTP) search on port 3200.
+stream_over_http_enabled: true
+
+server:
+  http_listen_address: 0.0.0.0
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  # Default 30s drops spans replayed from the collector's queue after an outage
+  # (they would leave a gap in span metrics / service graph; this counts them on arrival).
+  metrics_ingestion_time_range_slack: 15m
+  storage:
+    # Prometheus-agent WAL for generated metrics (required when processors are enabled).
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+# In-process wiring (these are the values -target=all auto-fills; setting them
+# explicitly only silences two startup warnings). Must match grpc_listen_port.
+querier:
+  frontend_worker:
+    frontend_address: 127.0.0.1:9095
+
+# 3.x: retention is executed by the in-process backend-worker using this
+# compaction block (the 2.x "compactor:" block no longer exists and is a
+# hard YAML error).
+backend_worker:
+  backend_scheduler_addr: 127.0.0.1:9095
+  compaction:
+    block_retention: 336h   # 14 days
+
+overrides:
+  defaults:
+    metrics_generator:
+      # 3.x: "local-blocks" was removed; TraceQL metrics / Traces Drilldown are
+      # served natively by the live-store (recent data) + backend blocks.
+      processors: [service-graphs, span-metrics]
+    ingestion:
+      # Default 10000 silently discards traces when the collector replays a backlog.
+      # Memory stays bounded by live_store.max_live_traces_bytes (250 MB).
+      max_traces_per_user: 100000
+    compaction:
+      # Per-tenant retention; a non-zero value here takes precedence over
+      # backend_worker.compaction.block_retention.
+      block_retention: 336h
+
+usage_report:
+  reporting_enabled: false
+

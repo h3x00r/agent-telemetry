@@ -1,0 +1,283 @@
+# OTel ingestion stack
+#   agents (OTel SDK, other VMs) --OTLP--> otel-collector (0.0.0.0:4317 gRPC / 0.0.0.0:4318 HTTP)
+#     --> Prometheus (metrics) / Loki (logs) / Tempo (traces) --> Grafana (0.0.0.0:3000)
+#
+# Host stays agnostic: everything runs in containers, data lives in named volumes,
+# configs are mounted read-only from this directory. Only OTLP and Grafana are published.
+#
+#   docker compose up -d --wait
+#   docker compose ps
+#   docker compose up -d <svc>        # (re)start one service; not "start", which fails if init was pruned
+#   docker compose kill -s SIGHUP prometheus   # reload prometheus.yml
+#   docker compose down               # keeps data;  add -v to wipe all volumes
+#   docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt   # CA for agents/browsers
+
+name: otel
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  # One-shot helper. The collector image is scratch (uid 10001, no shell) and a fresh
+  # named volume is root-owned, so its persistent queue dir must be chowned. It also
+  # drops a static busybox into the "probe" volume so the distroless collector and Loki
+  # images can run an HTTP healthcheck.
+  init:
+    image: busybox:1.36.1-musl
+    user: "0:0"
+    network_mode: none
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        chown -R 10001:10001 /var/lib/otelcol/file_storage
+        chmod 0750 /var/lib/otelcol/file_storage
+        cp /bin/busybox /probe/busybox.new
+        chmod 0555 /probe/busybox.new
+        mv -f /probe/busybox.new /probe/busybox
+    volumes:
+      - otelcol-data:/var/lib/otelcol/file_storage
+      - probe:/probe
+    logging: *logging
+
+  # One-shot: private CA (kept in tls-ca, never mounted elsewhere) + server cert for OTLP
+  # (4317/4318) and Grafana (3000). Issued once, re-issued when TLS_SANS changes or the cert
+  # is within 30 days of expiry. Keys are copied per consumer uid (collector 10001, Grafana 472).
+  certs:
+    build:
+      dockerfile_inline: |
+        FROM alpine:3.24.2
+        RUN apk add --no-cache openssl
+    image: otel-certs:local
+    user: "0:0"
+    network_mode: none
+    restart: "no"
+    environment:
+      TLS_SANS: ${TLS_SANS:?set TLS_SANS in .env}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        umask 077
+        if [ ! -s /ca/ca.key ]; then
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 3650 \
+            -subj "/CN=otel-stack CA" -keyout /ca/ca.key -out /ca/ca.crt \
+            -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+        fi
+        if [ -s /tls/server.crt ] && [ "$$(cat /ca/sans 2>/dev/null)" = "$$TLS_SANS" ] \
+           && openssl x509 -checkend 2592000 -noout -in /tls/server.crt >/dev/null; then
+          echo "server cert up to date"
+        else
+          cd /ca
+          openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -subj "/CN=otel-stack" \
+            -keyout server.key -out server.csr
+          printf 'subjectAltName=%s\nbasicConstraints=CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=serverAuth\n' "$$TLS_SANS" > ext.cnf
+          openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 825 -sha256 \
+            -extfile ext.cnf -out server.crt
+          install -m 0444 server.crt /tls/server.crt
+          install -m 0400 -o 10001 -g 10001 server.key /tls/collector.key
+          install -m 0400 -o 472 -g 0 server.key /tls/grafana.key
+          rm -f server.key server.csr ext.cnf
+          printf '%s' "$$TLS_SANS" > sans
+          echo "issued server cert for $$TLS_SANS"
+        fi
+        install -m 0444 /ca/ca.crt /tls/ca.crt
+        chmod 0755 /tls
+    volumes:
+      - tls-ca:/ca
+      - tls:/tls
+    logging: *logging
+
+  otel-collector:
+    <<: *hardening
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      certs:
+        condition: service_completed_successfully
+    environment:
+      GOMEMLIMIT: 640MiB            # ~80% of memory_limiter's hard limit (80% of mem_limit)
+      OTLP_BEARER_TOKEN: ${OTLP_BEARER_TOKEN:?set OTLP_BEARER_TOKEN in .env}
+    mem_limit: 1g                   # memory_limiter percentages are relative to this
+    ports:
+      - "0.0.0.0:4317:4317"         # OTLP gRPC  (TLS + bearer token)
+      - "0.0.0.0:4318:4318"         # OTLP HTTP  (TLS + bearer token)
+    volumes:
+      - ./otel-collector:/etc/otelcol-contrib:ro
+      - otelcol-data:/var/lib/otelcol/file_storage
+      - probe:/probe:ro
+      - tls:/tls:ro
+    healthcheck:
+      test: ["CMD", "/probe/busybox", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks: [otel]
+    logging: *logging
+
+  prometheus:
+    <<: *hardening
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.listen-address=0.0.0.0:9090
+      - --web.enable-otlp-receiver          # OTLP metrics from the collector
+      - --web.enable-remote-write-receiver  # span/service-graph metrics from Tempo
+      # exemplar-storage: trace exemplars. created-timestamp-zero-ingestion (experimental): write a 0
+      # at each new OTLP series' start time so increase()/rate() count the first export (every Claude
+      # Code session is a new series). promql-extended-range-selectors (experimental): the
+      # "anchored" range modifier, e.g. increase(x[$__range] anchored).
+      - --enable-feature=exemplar-storage,created-timestamp-zero-ingestion,promql-extended-range-selectors
+    restart: unless-stopped
+    depends_on:
+      certs:
+        condition: service_completed_successfully
+    environment:
+      GOMEMLIMIT: 900MiB
+    mem_limit: 1g
+    stop_grace_period: 1m
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+      - tls:/tls:ro                 # ca.crt, to scrape Grafana over HTTPS
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [otel]
+    logging: *logging
+
+  loki:
+    <<: *hardening
+    image: grafana/loki:3.7.8
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      GOMEMLIMIT: 900MiB
+    mem_limit: 1g
+    stop_grace_period: 30s
+    volumes:
+      - ./loki:/etc/loki:ro
+      - loki-data:/loki
+      - probe:/probe:ro
+    healthcheck:
+      test: ["CMD", "/probe/busybox", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks: [otel]
+    logging: *logging
+
+  tempo:
+    <<: *hardening
+    image: grafana/tempo:3.1.0
+    hostname: tempo                 # stable __metrics_gen_instance label across recreates
+    command: ["-target=all", "-config.file=/etc/tempo/tempo.yaml"]
+    restart: unless-stopped
+    environment:
+      GOMEMLIMIT: 1350MiB
+    mem_limit: 1536m
+    stop_grace_period: 45s          # backend-worker waits up to 30s on shutdown
+    volumes:
+      - ./tempo:/etc/tempo:ro
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD", "/tempo", "-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [otel]
+    logging: *logging
+
+  grafana:
+    <<: *hardening
+    image: grafana/grafana:13.2.3
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+      certs:
+        condition: service_completed_successfully
+    mem_limit: 1g
+    ports:
+      - "0.0.0.0:3000:3000"         # HTTPS
+    environment:
+      GOMEMLIMIT: 900MiB
+      GF_SERVER_PROTOCOL: https
+      GF_SERVER_CERT_FILE: /etc/grafana/tls/server.crt
+      GF_SERVER_CERT_KEY: /etc/grafana/tls/grafana.key
+      GF_SECURITY_COOKIE_SECURE: "true"   # protocol=https alone does not set the Secure flag
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?set GRAFANA_ROOT_URL in .env}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      # Encryption keys for secrets Grafana stores. Never change them once set (back up .env).
+      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY:?set GRAFANA_SECRET_KEY in .env}
+      GF_SECRETS_MANAGER_ENCRYPTION_SECRET_KEY_V1_SECRET_KEY: ${GRAFANA_SECRETS_KEK:?set GRAFANA_SECRETS_KEK in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SNAPSHOTS_EXTERNAL_ENABLED: "false"
+      GF_PUBLIC_DASHBOARDS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      # Drilldown apps are not bundled in 13.2.x: they are fetched from grafana.com on
+      # first start into grafana-data. Pinned, and auto-update off so core datasource
+      # plugins stay at the versions shipped with the image.
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+      GF_PLUGINS_PREINSTALL: "grafana-lokiexplore-app@2.6.0,grafana-exploretraces-app@2.2.1,grafana-metricsdrilldown-app@2.5.1,grafana-advisor-app@1.1.0"
+      GF_PLUGINS_DISABLE_PLUGINS: "grafana-pyroscope-app"   # no Pyroscope in this stack
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+      - tls:/etc/grafana/tls:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--cacert", "/etc/grafana/tls/ca.crt", "-o", "/dev/null", "https://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [otel]
+    logging: *logging
+
+networks:
+  otel:
+    name: otel
+
+volumes:
+  otelcol-data:
+  probe:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  tls-ca:
+  tls:
