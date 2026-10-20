@@ -121,3 +121,8 @@ To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on th
 | Send Grok Build's data, labelled by VM and persona | [Agent configuration (Grok Build)](REFERENCE.md#agent-configuration-grok-build) |
 | Send data from another app (Python, Node.js…) | [Other OTel SDKs](EXAMPLES.md#other-otel-sdks) |
 | Ports, TLS, limits, how it works | [REFERENCE.md](REFERENCE.md) |
+| Check for secrets before pushing | `tests/secrets.sh`: [Scan for secrets](runbook.md#scan-for-secrets) |
+
+## License
+
+The files in this repo are under the [MIT License](LICENSE). The images the stack runs (OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana and the plugins it installs, busybox, Alpine) and the ones the secret scan and CI use (gitleaks, the `actions/checkout` action) keep their own licenses. The agents it collects from, Claude Code (Anthropic) and Grok Build (xAI), keep their own terms of use. This project is not affiliated with or endorsed by Anthropic or xAI.

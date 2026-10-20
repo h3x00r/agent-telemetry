@@ -128,6 +128,38 @@ docker compose up -d --wait
 
 To roll back, restore the old tag and run `docker compose up -d --wait`. If the new version migrated the data, also restore the backup.
 
+## Scan for secrets
+
+On GitHub, every push and pull request runs `.github/workflows/ci.yml`, which runs `tests/secrets.sh`. It uses gitleaks to look for keys, tokens and passwords in two places:
+- **The git history:** what every commit on a branch or tag adds, files deleted since and binary ones included, what a two-parent merge itself adds (a conflict resolution, say), and the commit and tag messages. On GitHub that means the branches and tags pushed there; locally, remote-tracking branches too. Stashes aren't scanned.
+- **The files in the checkout:** the tracked ones as they are now, and untracked ones git doesn't ignore. A staged version that differs from the file on disk is scanned once it is committed.
+
+What git ignores (`.env`, `otel-ca.crt`) never goes into the scan. A finding shows its rule, file, line, commit and fingerprint, never the secret. A finding in a message shows as `../msgs/commit-<sha>.txt` or `../msgs/tag-<sha>.txt`. One in a merge's conflict resolution shows its file as `b/<path>`.
+
+CI scans after the push, so anything it finds is already on GitHub. Run the same scan before you push, in any checkout of this repo on a machine with Docker (it pulls its gitleaks image the first time):
+```sh
+tests/secrets.sh                                   # exit 0 nothing found, 1 found something (listed), 2 couldn't scan
+ln -s ../../tests/secrets.sh .git/hooks/pre-push   # optional: run it on every git push from this checkout
+```
+The hook is a convenience, not a guard: anything that can write `.git/hooks` can remove it, and `git push --no-verify` skips it. The scan stops with exit 2, having scanned nothing, on a history it can't read (a shallow clone: `git fetch --unshallow`; missing objects, or alternates that moved), or when its rules miss a fake token it plants first (a `.gitleaks.toml` without `[extend] useDefault = true`, or one whose `disabledRules` or allowlists cover `ghp_` tokens).
+
+| Finding | What to do |
+|---|---|
+| A real secret | Revoke or rotate it first (for the OTLP token: [Rotate the OTLP token](#rotate-the-otlp-token); for the Grafana admin password: [Reset the Grafana admin password](#reset-the-grafana-admin-password)). A push can't be taken back: the commit stays in every clone, fork and pull request, and on GitHub it stays reachable by its SHA until GitHub Support removes it. Take the secret out of the files (into `.env`) and commit that. Then do one of two things, or every scan keeps failing on the old commit: add the history finding's fingerprint (`<commit>:<file>:<rule>:<line>`) as a line of `.gitleaksignore` and commit it, or remove the secret from the history with `git filter-repo` on every branch and tag, then a force-push that everyone has to follow. |
+| A false positive | Before you commit the line, put `gitleaks:allow` in a comment on it. After the commit that no longer helps, because the history scan reads the commit that added the line: add the fingerprints the scan printed, as printed, to `.gitleaksignore` and commit it (an uncommitted one only fixes your local scan). One without a commit (`<file>:<rule>:<line>`) hides that rule on that line in every commit, later edits included. For a value that stays in the files, allow that exact value in a `.gitleaks.toml` instead (below). |
+
+A `.gitleaks.toml` that allows one exact value:
+```toml
+[extend]
+useDefault = true          # keep gitleaks' own rules: without this line there are none
+
+[[allowlists]]
+description = "the fixture token in tests/"
+regexes = ['''^ghp_the-exact-value$''']
+```
+
+To upgrade: gitleaks is pinned in `tests/secrets.sh` (`GITLEAKS_IMAGE`, a tag and its digest) and `actions/checkout` in `ci.yml` (a commit). Bump them by hand. To stop a pull request with a finding from being merged, make **Secret scan** a required check in the repo's branch rules.
+
 ## Wipe everything
 
 **Destructive.** [Back up](#back-up-and-restore) first. `docker compose down -v` deletes all data, the collector queue **and the CA**. After `docker compose up -d --wait`, export the new CA with `docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt` and install it on every agent ([README step 2](README.md#2-connect-an-agent-vm)) and browser. The Grafana admin login reverts to the `.env` values.
