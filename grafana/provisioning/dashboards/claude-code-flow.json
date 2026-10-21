@@ -1,0 +1,1176 @@
+{
+  "uid": "claude-code-flow",
+  "title": "Claude Code flow timeline",
+  "description": "When each persona's Claude Code sessions ran, prompted, called the model, used tools, ran workflows and subagents, compacted and failed, as timelines with one row per persona. Claude Code reports a persona only from a persona=<name> entry in OTEL_RESOURCE_ATTRIBUTES (nexus writes it; the README's managed-settings block does not), so data without one gets no persona row: set the persona resource attribute.",
+  "tags": [
+    "claude-code",
+    "otel"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "version": 1,
+  "links": [
+    {
+      "title": "Agent telemetry",
+      "type": "dashboards",
+      "tags": [
+        "otel"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "VM",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "host.name of the agent VM",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(claude_code_session_count_total, host_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(claude_code_session_count_total, host_name)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "user",
+        "label": "User",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Claude Code account",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(claude_code_session_count_total{host_name=~\"$host\"}, user_email)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(claude_code_session_count_total{host_name=~\"$host\"}, user_email)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "deployment.environment.name",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(claude_code_session_count_total, deployment_environment_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(claude_code_session_count_total, deployment_environment_name)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Applies to cost, tokens, lines of code and API panels",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(claude_code_cost_usage_USD_total, model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(claude_code_cost_usage_USD_total, model)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "persona",
+        "label": "Persona",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "persona resource attribute (persona=<name> in OTEL_RESOURCE_ATTRIBUTES). Each selected persona gets its own row; data without a persona has no row.",
+        "query": {
+          "qryType": 3,
+          "query": "query_result(group by (persona) (last_over_time(claude_code_active_time_seconds_total{host_name=~\"$host\", user_email=~\"$user\", persona!=\"\"}[$__range])))",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "query_result(group by (persona) (last_over_time(claude_code_active_time_seconds_total{host_name=~\"$host\", user_email=~\"$user\", persona!=\"\"}[$__range])))",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "/persona=\"([^\"]+)\"/",
+        "hide": 0
+      },
+      {
+        "name": "session",
+        "label": "Session",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Claude Code session (session.id) of the selected personas; All = every session.",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(claude_code_active_time_seconds_total{host_name=~\"$host\", user_email=~\"$user\", deployment_environment_name=~\"$env\", persona=~\"$persona\"}, session_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(claude_code_active_time_seconds_total{host_name=~\"$host\", user_email=~\"$user\", deployment_environment_name=~\"$env\", persona=~\"$persona\"}, session_id)",
+        "refresh": 2,
+        "sort": 0,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "allowCustomValue": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "description": "All selected personas in one panel. Claude Code reports a persona only from a persona=<name> entry in OTEL_RESOURCE_ATTRIBUTES (nexus writes it; the README's managed-settings block does not), so data without one gets no persona row: set the persona resource attribute."
+    },
+    {
+      "id": 1,
+      "type": "state-timeline",
+      "title": "Personas: activity",
+      "description": "One lane per persona: green \"tools\" where Claude Code ran at least one tool (tool_result event) in the bucket, blue \"model\" where it only called the model (api_request, no tool result), empty where idle. Each lane counts events per time bucket ($__auto: the bucket grows with the time range, about 30s at 6h, 2m at 24h, 15m at 7d); a block means at least one event in that bucket, not how long the work took. Events without a persona show as \"(none)\". Claude Code reports a persona only from a persona=<name> entry in OTEL_RESOURCE_ATTRIBUTES (nexus writes it; the README's managed-settings block does not), so data without one gets no persona row: set the persona resource attribute. Follows VM, User, Environment, Persona and Session; ignores Model (Loki api_request events book advisor calls under the parent model).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 24,
+        "h": 7
+      },
+      "interval": "15s",
+      "maxDataPoints": 600,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace((sum by (persona) (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"tool_result\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto)) > bool 0) * 2 or (sum by (persona) (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"api_request\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto)) > bool 0), \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "idle",
+                  "color": "transparent",
+                  "index": 0
+                },
+                "1": {
+                  "text": "model",
+                  "color": "blue",
+                  "index": 1
+                },
+                "2": {
+                  "text": "tools",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Persona: $persona",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "repeat": "persona",
+      "description": "Repeated once per selected persona; every panel in it shows only that persona. Claude Code reports a persona only from a persona=<name> entry in OTEL_RESOURCE_ATTRIBUTES (nexus writes it; the README's managed-settings block does not), so data without one gets no persona row: set the persona resource attribute."
+    },
+    {
+      "id": 2,
+      "type": "state-timeline",
+      "title": "Flow",
+      "description": "What this persona's Claude Code sessions did over time, one lane per kind, top to bottom: Prompts (user_prompt), Model calls (api_request), one \"Tool: <name>\" lane per tool that ran (tool_result), Workflows (any event of a Workflow tool run, i.e. with workflow_run_id), Subagents (subagent_completed, at the end of the subagent), Compactions, Failed tools (tool_result with success other than true) and API errors (api_error; no lane while there are none). Each lane counts events per time bucket ($__auto: the bucket grows with the time range, about 30s at 6h, 2m at 24h, 15m at 7d); a block means at least one event in that bucket, not how long the work took. Hover a block for its lane; the work log (panel link) lists the events. Follows VM, User, Environment, Persona and Session; ignores Model (Loki api_request events book advisor calls under the parent model). Claude Code reports a persona only from a persona=<name> entry in OTEL_RESOURCE_ATTRIBUTES (nexus writes it; the README's managed-settings block does not), so data without one gets no persona row: set the persona resource attribute.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 12
+      },
+      "interval": "15s",
+      "maxDataPoints": 600,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"user_prompt\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Prompts"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"api_request\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Model calls"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"tool_result\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Tool: {{tool_name}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | workflow_run_id!=\"\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Workflows"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"subagent_completed\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Subagents"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"compaction\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Compactions"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"tool_result\" | success!=\"true\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Failed tools"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=\"api_error\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "API errors"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompts"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "purple",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model calls"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "blue",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Tool: .*"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Workflows"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Subagents"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Compactions"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "light-purple",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed tools"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "API errors"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "dark-red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "links": [
+        {
+          "title": "Open the work log (same time range and Session)",
+          "targetBlank": false,
+          "url": "/d/claude-code-work?${__url_time_range}&${host:queryparam}&${user:queryparam}&${env:queryparam}&${model:queryparam}&${session:queryparam}&var-prompt=.*"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "state-timeline",
+      "title": "Sessions",
+      "description": "One lane per Claude Code session of this persona, labelled with the first 8 characters of its session id: a block where the session sent any event in the bucket. Each lane counts events per time bucket ($__auto: the bucket grows with the time range, about 30s at 6h, 2m at 24h, 15m at 7d); a block means at least one event in that bucket, not how long the work took. Click a block to open that session in the work log with the same time range. Follows VM, User, Environment, Persona and Session; ignores Model (Loki api_request events book advisor calls under the parent model). At most 1000 sessions (Loki max_query_series).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 6
+      },
+      "interval": "15s",
+      "maxDataPoints": 600,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id, session_short) (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | session_id!=\"\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" | label_format session_short=`{{ trunc 8 .session_id }}` [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{session_short}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "light-blue",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "decimals": 0,
+          "links": [
+            {
+              "title": "Open this session in the work log",
+              "oneClick": true,
+              "url": "/d/claude-code-work?${__url_time_range}&${host:queryparam}&${user:queryparam}&${env:queryparam}&${model:queryparam}&var-session=${__field.labels.session_id}&var-prompt=.*"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "state-timeline",
+      "title": "Workflow runs",
+      "description": "One lane per Workflow tool run (workflow_run_id, first 8 characters) of this persona: a block where the run, including its subagents, sent any event (API request, tool call, response) in the bucket. Each lane counts events per time bucket ($__auto: the bucket grows with the time range, about 30s at 6h, 2m at 24h, 15m at 7d); a block means at least one event in that bucket, not how long the work took. Click a block to open the run's session in the work log, whose Workflow runs table has the details. Follows VM, User, Environment, Persona and Session; ignores Model (Loki api_request events book advisor calls under the parent model). At most 1000 runs (Loki max_query_series).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 6
+      },
+      "interval": "15s",
+      "maxDataPoints": 600,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (workflow_run_id, run_short, session_id) (count_over_time({service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | workflow_run_id!=\"\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" | label_format run_short=`{{ trunc 8 .workflow_run_id }}` [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Run {{run_short}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "decimals": 0,
+          "links": [
+            {
+              "title": "Open this run's session in the work log",
+              "oneClick": true,
+              "url": "/d/claude-code-work?${__url_time_range}&${host:queryparam}&${user:queryparam}&${env:queryparam}&${model:queryparam}&var-session=${__field.labels.session_id}&var-prompt=.*"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Flow events",
+      "description": "The events behind the Flow lanes for this persona, newest first: prompts, model calls (Model), tool calls (Tool, Success), subagents, compactions and API errors, with Duration (duration_ms of the model call or tool call), the Workflow run, prompt and session (first 8 characters). Shows the newest 500 events; narrow the time range or pick a Session for older ones. Click a Session or Prompt to open it in the work log with the same time range. Follows VM, User, Environment, Persona and Session; ignores Model (Loki api_request events book advisor calls under the parent model).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"claude-code\", host_name=~\"$host\", deployment_environment_name=~\"$env\"} | event_name=~\"user_prompt|api_request|tool_result|subagent_completed|compaction|api_error\" | user_email=~\"$user\" | persona=~\"$persona\" | session_id=~\"$session\" | label_format prompt_short=`{{ trunc 8 .prompt_id }}`, session_short=`{{ trunc 8 .session_id }}`, run_short=`{{ trunc 8 .workflow_run_id }}`",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 500,
+          "direction": "backward"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "replace": true,
+            "keepTime": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "fields": {},
+            "conversions": [
+              {
+                "targetField": "duration_ms",
+                "destinationType": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {
+              "Time": true,
+              "event_name": true,
+              "tool_name": true,
+              "model": true,
+              "success": true,
+              "duration_ms": true,
+              "run_short": true,
+              "prompt_short": true,
+              "session_short": true,
+              "prompt_id": true,
+              "session_id": true
+            },
+            "indexByName": {
+              "Time": 0,
+              "event_name": 1,
+              "tool_name": 2,
+              "model": 3,
+              "success": 4,
+              "duration_ms": 5,
+              "run_short": 6,
+              "prompt_short": 7,
+              "session_short": 8,
+              "prompt_id": 9,
+              "session_id": 10
+            },
+            "renameByName": {
+              "event_name": "Kind",
+              "tool_name": "Tool",
+              "model": "Model",
+              "success": "Success",
+              "duration_ms": "Duration",
+              "run_short": "Run",
+              "prompt_short": "Prompt",
+              "session_short": "Session"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Time",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "user_prompt": {
+                        "text": "prompt",
+                        "index": 0,
+                        "color": "purple"
+                      },
+                      "api_request": {
+                        "text": "model call",
+                        "index": 1,
+                        "color": "blue"
+                      },
+                      "tool_result": {
+                        "text": "tool",
+                        "index": 2,
+                        "color": "green"
+                      },
+                      "subagent_completed": {
+                        "text": "subagent",
+                        "index": 3,
+                        "color": "yellow"
+                      },
+                      "compaction": {
+                        "text": "compaction",
+                        "index": 4,
+                        "color": "light-purple"
+                      },
+                      "api_error": {
+                        "text": "API error",
+                        "index": 5,
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Success"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "true": {
+                        "text": "ok",
+                        "index": 0,
+                        "color": "green"
+                      },
+                      "false": {
+                        "text": "failed",
+                        "index": 1,
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Run"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this prompt in the work log",
+                    "url": "/d/claude-code-work?${__url_time_range}&${host:queryparam}&${user:queryparam}&${env:queryparam}&${model:queryparam}&var-session=${__data.fields.session_id}&var-prompt=${__data.fields.prompt_id}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this session in the work log",
+                    "url": "/d/claude-code-work?${__url_time_range}&${host:queryparam}&${user:queryparam}&${env:queryparam}&${model:queryparam}&var-session=${__data.fields.session_id}&var-prompt=.*"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true,
+          "fields": ""
+        }
+      }
+    }
+  ]
+}

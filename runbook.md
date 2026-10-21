@@ -38,6 +38,8 @@ A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the
 | `docker compose start` fails | The exited `init` container was pruned | Use `docker compose up -d`. |
 | Grafana login fails after editing `.env` | The password only applies on first start | [Reset it](#reset-the-grafana-admin-password). |
 | Drilldown apps missing in Grafana | No internet on first start | Allow outbound HTTPS, then `docker compose restart grafana`. |
+| Work log **Shell commands**: `metrics query time range exceeds the maximum allowed duration of 24h0m0s` | Tempo still runs an older `tempo.yaml` | `docker compose restart tempo`. |
+| Flow timeline has no persona rows | The data has no persona | See [Personas](REFERENCE.md#personas). |
 
 ## Apply a change
 

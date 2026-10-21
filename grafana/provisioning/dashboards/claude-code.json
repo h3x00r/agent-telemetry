@@ -3381,7 +3381,7 @@
               "queryType": "traceql",
               "limit": 20,
               "tableType": "traces",
-              "query": "{ resource.service.name = \"claude-code\" && resource.host.name =~ \"${host:pipe}\" && resource.deployment.environment.name =~ \"${env:pipe}\" && span.user.email =~ \"${user:pipe}\" && name = \"claude_code.interaction\" }"
+              "query": "{ resource.service.name = \"claude-code\" && resource.host.name =~ \"${host:pipe}\" && (resource.deployment.environment.name =~ \"${env:pipe}\" || resource.deployment.environment.name = nil) && span.user.email =~ \"${user:pipe}\" && name = \"claude_code.interaction\" }"
             }
           ],
           "fieldConfig": {

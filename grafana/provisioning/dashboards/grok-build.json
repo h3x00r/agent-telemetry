@@ -1618,7 +1618,7 @@
             "lastNotNull"
           ],
           "fields": "",
-          "values": false
+          "values": true
         },
         "legend": {
           "displayMode": "table",

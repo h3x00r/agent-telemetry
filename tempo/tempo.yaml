@@ -50,6 +50,8 @@ storage:
 query_frontend:
   search:
     max_duration: 0   # no cap on the search range (default 168h breaks dashboard ranges > 7d); retention bounds it
+  metrics:
+    max_duration: 336h   # TraceQL metrics (work-log Shell commands, Traces Drilldown); the 24h default rejects longer ranges
 
 querier:
   frontend_worker:

@@ -66,6 +66,7 @@ export OTEL_RESOURCE_ATTRIBUTES="host.name=$(hostname -s),deployment.environment
 ```
 
 - `host.name` is **required**: Claude Code does not set it, and it is what tells VMs apart in Prometheus and Loki labels.
+- `persona=<name>` is optional; the flow timeline needs it ([Personas](#personas)).
 - Trust the CA with `NODE_EXTRA_CA_CERTS`. Claude Code's HTTP exporter ignores `OTEL_EXPORTER_OTLP_CERTIFICATE`: verification fails with "unable to verify the first certificate".
 - The header must be exactly `Authorization=Bearer <token>`, with a capital B.
 - gRPC must use a **hostname** from `TLS_SANS`, not the IP. Claude Code refuses an IP as the TLS server name ("Setting the TLS ServerName to an IP address is not permitted"). The VM must resolve that name, via DNS or `/etc/hosts`:
@@ -124,6 +125,38 @@ export OTEL_EXPORTER_OTLP_METRICS_HEADERS="$H" OTEL_EXPORTER_OTLP_LOGS_HEADERS="
 Every Claude Code or Grok Build session is a new set of series, so use the `anchored` range modifier. Plain `increase()`/`rate()` extrapolate short series, e.g. 1.5 sessions for 1.
 
 Loki index labels are `service_name`, `service_namespace`, `deployment_environment(_name)` and `host_name`. Everything else (`event_name`, `session_id`, `trace_id`, ...) is structured metadata. Grafana links between signals: trace → logs, log `trace_id` → trace, exemplars → trace, plus the service map from Tempo span metrics.
+
+## Work logs and flow timelines
+
+Besides its main dashboard, each agent has a **work log** (`claude-code-work.json`, `grok-build-work.json`) and a **flow timeline** (`claude-code-flow.json`, `grok-build-flow.json`).
+
+- **Work log**: tables, top to bottom: **Sessions**; **Session work** (Claude Code: prompts, tool summary, shell commands, code edits, skills, subagents, compactions; Grok Build: turns, tool summary, file types); **Workflows** (Claude Code); **Tool calls**; **Session setup** (collapsed). Click a session id to set **Session** and narrow the time range to that session, a prompt id to set **Prompt**, a trace id to open the trace. Set **Prompt** back to `.*` to clear it; `.*` also matches events without a `prompt_id`.
+- Tables built from several queries (Sessions, Prompts, Turns, Workflows, Grok Build's Tool calls) are joined by a Grafana SQL expression over hidden queries; only Sessions mixes Prometheus and Loki. Each hidden query ends in a placeholder row (`or label_replace(vector(0), ...)`), because an empty input breaks the SQL, and the SQL drops it.
+- Limits: event tables show the newest 5000 rows (Loki `max_entries_limit_per_query`). Summary tables fail with a Loki series-limit error above about 1000 sessions, or about 500 prompts or turns with Session = All (Loki `max_query_series`). Narrow the time range or pick a session.
+- Claude Code's Tokens, Cost and lines come from Prometheus and follow **Model**; commits, edits and active time come from Prometheus too but have no model label, and prompts, API calls and tool calls come from Loki: all of those ignore it. Prometheus also counts advisor-model tokens, which `api_request` events don't carry, so a session's Tokens exceed the sum of its prompts'.
+- **Shell commands** (Claude Code) counts the Tempo span attributes `bash_argv0` (the program, e.g. `git`) and `bash_command_class` with TraceQL metrics. `tempo.yaml` allows those over 14 days (`query_frontend.metrics.max_duration`; Tempo's default is 24h). After pulling this change: `docker compose restart tempo`.
+- **Workflows** (Claude Code) groups events by `workflow_run_id`, one per run of Claude Code's Workflow tool; user-defined workflows are named `custom`. Grok Build sends no workflow data.
+- **Flow timeline**: an overview lane per persona (green = tools, blue = model only), then a row per persona with lanes for prompts, model calls, each tool, workflows, subagents and compactions (Claude Code) or turn ends (Grok Build), and failed tools, plus session lanes, workflow-run lanes (Claude Code) and its newest 500 events. A mark means at least one event in that time bucket; the bucket size depends on the time range. Session lanes and events link to the work log.
+
+### Personas
+
+The flow timelines repeat a row per persona; data without one shows only as `(none)` in the overview.
+- Claude Code: add `persona=<name>` to `OTEL_RESOURCE_ATTRIBUTES`, e.g. `host.name=$(hostname -s),deployment.environment.name=prod,persona=<name>` in README step 2.
+- Grok Build ignores `OTEL_RESOURCE_ATTRIBUTES`: send the `X-Nexus-Persona` header ([Agent configuration (Grok Build)](#agent-configuration-grok-build)).
+
+### Optional detail: commands and file paths
+
+Both agents report which tool ran, not what it did. These agent-side settings add more; all are off by default, and each stores more sensitive data in Loki or Tempo:
+
+| Setting | Agent | Adds | Exposes |
+|---|---|---|---|
+| `OTEL_LOG_TOOL_DETAILS=1` | Claude Code | On tool events: `tool_parameters` (Bash command, MCP server and tool, skill and subagent names, commit id after `git commit`), `tool_input` (file paths, URLs, patterns), the full `error`; real skill names | Commands and paths, which can contain secrets |
+| `OTEL_METRICS_INCLUDE_REPOSITORY=true` | Claude Code | Repository URL, owner and name on metrics and events | Repository names |
+| `OTEL_LOG_TOOL_DETAILS=1` (or `[telemetry] otel_log_tool_details = true`) | Grok Build | Real tool and MCP names, `file_path`, and a preview of `tool_parameters` that includes shell commands | Commands and paths |
+| `OTEL_LOG_TOOL_CONTENT=1` | Both | Claude Code: tool output (file contents read, Bash and web results) on trace spans; Edit/Write content also needs `OTEL_LOG_TOOL_DETAILS`. Grok Build: tool input, output and the full command on events | File contents |
+| `OTEL_LOG_USER_PROMPTS=1` | Both | Prompt and response text | Everything typed |
+
+Set them with the other telemetry settings (Claude Code: the managed-settings `env` block; Grok Build: its environment), then restart the agent sessions. The work logs don't show these fields yet: query them in Explore. Loki rejects a record whose structured metadata exceeds 256KB, and the record is lost ([runbook](runbook.md#troubleshooting)).
 
 ## Behaviour and limits
 

@@ -116,6 +116,9 @@ Only these labels go inside `{...}`: `service_name`, `service_namespace`, `deplo
 sum by (host_name, model) (sum_over_time({service_name="claude-code"} | event_name="api_request" | unwrap cost_usd [$__range]))
 quantile_over_time(0.95, {service_name="claude-code"} | event_name="api_request" | unwrap duration_ms [$__range]) by (model)
 sum by (tool_name) (count_over_time({service_name="claude-code"} | event_name="tool_result" [$__range]))
+
+# Claude Code workflow runs per VM and persona (distinct workflow_run_id)
+count by (host_name, persona) (sum by (workflow_run_id, host_name, persona) (count_over_time({service_name="claude-code"} | workflow_run_id!="" [$__range])))
 ```
 
 ## TraceQL
@@ -125,4 +128,6 @@ sum by (tool_name) (count_over_time({service_name="claude-code"} | event_name="t
 { name = "claude_code.interaction" && duration > 2m }
 { resource.service.name = "claude-code" && status = error }
 { resource.service.name = "claude-code" } | rate() by (name)
+{ resource.service.name = "claude-code" && span.bash_argv0 != nil } | count_over_time() by (span.bash_argv0)
 ```
+The last one counts the programs Claude Code ran through its Bash tool (a TraceQL metrics query).

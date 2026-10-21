@@ -1,0 +1,1040 @@
+{
+  "uid": "grok-build-flow",
+  "title": "Grok Build flow timeline",
+  "description": "When each Grok Build persona was prompting, calling the model and running tools, as timelines with one row per persona. Grok Build ignores OTEL_RESOURCE_ATTRIBUTES: persona is added by the collector from the X-Nexus-* headers nexus sends (see REFERENCE.md, \"Agent configuration (Grok Build)\"), so headless grok -p runs and agents not launched by nexus have none. Data without a persona cannot be repeated over and appears only as (none) in the overview.",
+  "tags": [
+    "grok-build",
+    "otel"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "version": 1,
+  "links": [
+    {
+      "title": "Agent telemetry",
+      "type": "dashboards",
+      "tags": [
+        "otel"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "VM",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "host.name of the agent VM (from the X-Nexus-Host header)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total, host_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total, host_name)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "user",
+        "label": "User",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Grok account",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, user_email)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, user_email)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "persona",
+        "label": "Persona",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "nexus persona (added by the collector from the X-Nexus-Persona header). Each selected persona gets its own row; data without a persona cannot be repeated over (set persona via nexus) and shows only as (none) in the overview.",
+        "query": {
+          "qryType": 3,
+          "query": "query_result(group by (persona) (last_over_time(grok_code_token_usage_total{host_name=~\"$host\", user_email=~\"$user\", persona!=\"\"}[$__range])))",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "query_result(group by (persona) (last_over_time(grok_code_token_usage_total{host_name=~\"$host\", user_email=~\"$user\", persona!=\"\"}[$__range])))",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "/persona=\"([^\"]+)\"/",
+        "hide": 0
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Applies to every panel whose data has a model; Tool Decisions and Startup have none",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, model)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "session",
+        "label": "Session",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Grok Build session (session_id). All = every session.",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, session_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, session_id)",
+        "refresh": 2,
+        "sort": 2,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "allowCustomValue": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "description": "Activity of every persona side by side.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "state-timeline",
+      "title": "Personas: activity",
+      "description": "One lane per persona: green = tools (at least one tool result in the bucket), blue = model (API responses but no tool result), blank = nothing; \"idle\" (transparent) = only other events such as prompts or turn ends. Buckets are $__auto wide (about 1/300 of the time range: 1m at 6h, 5m at 24h, 30m at 7d); a box means at least one event in that bucket, not how long the work took. (none) = events without a persona, shown only while Persona is All; they get no row below, because rows repeat over persona values. Grok Build ignores OTEL_RESOURCE_ATTRIBUTES: persona is added by the collector from the X-Nexus-* headers nexus sends (see REFERENCE.md, \"Agent configuration (Grok Build)\"), so headless grok -p runs and agents not launched by nexus have none. Honours VM, User, Persona, Model and Session. Loki returns at most 1000 series per query (one per persona).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "maxDataPoints": 300,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace((sum by (persona) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto)) > bool 0) * 2 or (sum by (persona) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto)) > bool 0) or sum by (persona) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto)) * 0, \"persona\", \"(none)\", \"persona\", \"\")",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{persona}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "idle",
+                  "color": "transparent",
+                  "index": 0
+                },
+                "1": {
+                  "text": "model",
+                  "color": "blue",
+                  "index": 1
+                },
+                "2": {
+                  "text": "tools",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "Persona: $persona",
+      "description": "Repeated once per selected persona. Buckets are $__auto wide (about 1/300 of the time range: 1m at 6h, 5m at 24h, 30m at 7d); a box means at least one event in that bucket, not how long the work took. Data without a persona has no row (set the persona via nexus).",
+      "repeat": "persona",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 4,
+      "type": "state-timeline",
+      "title": "Flow",
+      "description": "What persona $persona did over time, one lane per kind of event (the value is the event count in the bucket, shown on hover). Prompts = prompt events (a user prompt came in); Model calls = API-response events (a model call finished); Tool: <name> = tool-result events of that tool; Turn ends = turn-end events (a turn finished); Failed tools = tool results whose outcome is not success. Buckets are $__auto wide (about 1/300 of the time range: 1m at 6h, 5m at 24h, 30m at 7d); a box means at least one event in that bucket, not how long the work took. Lanes with no event in the range are not drawn. Honours VM, User, Model and Session. Data without a persona never shows here (set it via nexus: the collector adds persona from the X-Nexus-* headers).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "maxDataPoints": 300,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | prompt_length!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Prompts"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Model calls"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Tool: {{tool_name}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_call_count!=\"\" | duration_ms!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Turn ends"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | outcome!=\"success\" [$__auto] offset -$__auto))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Failed tools"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompts"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "purple",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model calls"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "blue",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^Tool: .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turn ends"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed tools"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "state-timeline",
+      "title": "Sessions",
+      "description": "One lane per session of persona $persona (lane = first 8 characters of session_id); a box = the session sent at least one event in that bucket, so gaps are idle time. Buckets are $__auto wide (about 1/300 of the time range: 1m at 6h, 5m at 24h, 30m at 7d); a box means at least one event in that bucket, not how long the work took. Click a lane and pick the link to open the session in the Grok Build work log with the same time range (session ids are time-ordered, so two sessions started within about a minute can share a label; the link still carries the full id). Honours VM, User, Model and Session. Loki returns at most 1000 series per query, so more than 1000 sessions in the range would error: narrow the time range.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "maxDataPoints": 300,
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id, session_short) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | session_id!=\"\" | label_format session_short=`{{ trunc 8 .session_id }}` [$__auto] offset -$__auto)) > bool 0",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{session_short}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "semi-dark-blue",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "active",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "decimals": 0,
+          "unit": "none",
+          "links": [
+            {
+              "title": "Open this session in the Grok Build work log",
+              "url": "/d/grok-build-work?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&${model:queryparam}&var-session=${__field.labels.session_id}&var-prompt=.*"
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Flow events",
+      "description": "The events behind the Flow lanes for persona $persona, newest first: prompts, model calls (API responses: Stop reason, Duration = model time), tool calls (Outcome success / error, Duration) and turn ends (Outcome, Duration = whole turn). Kind is derived from the event attributes (Grok events have no event name). Session / Prompt show the first 8 characters; click them to open that session or turn in the Grok Build work log. Shows the newest 500 events; narrow the time range or pick a session for older ones. Honours VM, User, Model and Session.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | prompt_length!=\"\" or stop_reason!=\"\" or (tool_name!=\"\" and duration_ms!=\"\") or (tool_call_count!=\"\" and duration_ms!=\"\") | session_id=~\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | model=~\"$model\" | label_format kind=`{{ if .prompt_length }}Prompt{{ else if .stop_reason }}Model call{{ else if .tool_call_count }}Turn end{{ else if .tool_name }}Tool call{{ else }}Other{{ end }}`, prompt_short=`{{ trunc 8 .prompt_id }}`, session_short=`{{ trunc 8 .session_id }}`",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 500,
+          "direction": "backward"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "auto",
+            "replace": true,
+            "keepTime": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "fields": {},
+            "conversions": [
+              {
+                "targetField": "turn_number",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "duration_ms",
+                "destinationType": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "includeByName": {
+              "Time": true,
+              "kind": true,
+              "turn_number": true,
+              "tool_name": true,
+              "outcome": true,
+              "stop_reason": true,
+              "duration_ms": true,
+              "session_short": true,
+              "prompt_short": true,
+              "prompt_id": true,
+              "session_id": true
+            },
+            "excludeByName": {},
+            "renameByName": {
+              "kind": "Kind",
+              "turn_number": "Turn",
+              "tool_name": "Tool",
+              "outcome": "Outcome",
+              "stop_reason": "Stop reason",
+              "duration_ms": "Duration",
+              "session_short": "Session",
+              "prompt_short": "Prompt"
+            },
+            "indexByName": {
+              "Time": 0,
+              "kind": 1,
+              "turn_number": 2,
+              "tool_name": 3,
+              "outcome": 4,
+              "stop_reason": 5,
+              "duration_ms": 6,
+              "session_short": 7,
+              "prompt_short": 8,
+              "prompt_id": 9,
+              "session_id": 10
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Time",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Prompt": {
+                        "text": "Prompt",
+                        "color": "purple",
+                        "index": 0
+                      },
+                      "Model call": {
+                        "text": "Model call",
+                        "color": "blue",
+                        "index": 1
+                      },
+                      "Tool call": {
+                        "text": "Tool call",
+                        "color": "green",
+                        "index": 2
+                      },
+                      "Turn end": {
+                        "text": "Turn end",
+                        "color": "yellow",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turn"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "text": "success",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "error": {
+                        "text": "error",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "completed": {
+                        "text": "completed",
+                        "color": "green",
+                        "index": 2
+                      },
+                      "cancelled": {
+                        "text": "cancelled",
+                        "color": "orange",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Session"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this session in the Grok Build work log",
+                    "url": "/d/grok-build-work?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&${model:queryparam}&var-session=${__data.fields.session_id}&var-prompt=.*"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this turn in the Grok Build work log",
+                    "url": "/d/grok-build-work?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&${model:queryparam}&var-session=${__data.fields.session_id}&var-prompt=${__data.fields.prompt_id}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": []
+        }
+      }
+    }
+  ]
+}
