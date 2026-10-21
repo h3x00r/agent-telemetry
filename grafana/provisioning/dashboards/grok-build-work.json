@@ -1464,7 +1464,7 @@
       "id": 6,
       "type": "table",
       "title": "File types touched",
-      "description": "One row per file extension and tool for the selected session and turn: tool results that carry a file_extension (read_file, sometimes grep). Grok Build sends no file paths or line counts, so the extension is the only file detail; tool results without a file (shell commands) are not counted here. Failed = outcome is not success. Honours VM, Persona, User, Model, Session and Prompt.",
+      "description": "One row per file extension and tool for the selected session and turn: tool results that carry a file_extension (read_file, sometimes grep). Grok Build sends no line counts, and full file paths only with OTEL_LOG_TOOL_DETAILS (File in Tool calls), so the extension is the only file detail here; tool results without a file (shell commands) are not counted here. Failed = outcome is not success. Honours VM, Persona, User, Model, Session and Prompt.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -1634,7 +1634,7 @@
       "id": 8,
       "type": "table",
       "title": "Tool calls",
-      "description": "One row per tool call (tool-result event) of the selected session and turn, newest first. Outcome, Success, Duration, File type and Hook rewrote come from the tool result; Decision, Access (access_kind) and Permission mode come from the matching tool-decision event (joined on tool_use_id; blank if the decision is outside the range or beyond the line limit). Shows the newest 5000 tool calls; narrow the time range or pick a session for older ones. Honours VM, Persona, User, Model (results only; decisions carry no model), Session and Prompt. Click a Prompt to filter to that turn.",
+      "description": "One row per tool call (tool-result event) of the selected session and turn, newest first. Outcome, Success, Duration, File type, File and Hook rewrote come from the tool result; Decision, Access (access_kind) and Permission mode come from the matching tool-decision event (joined on tool_use_id; blank if the decision is outside the range or beyond the line limit). File (file_path) is the full path the tool touched. Parameters is the tool_parameters preview of the call arguments (command, path, pattern) shown as sent: from the tool result, else from its decision. Both fill only when the agents run with OTEL_LOG_TOOL_DETAILS=1 or [telemetry] otel_log_tool_details = true. Grok Build cuts the preview at 4 KB, shortens long strings and scrubs secrets and home paths, so it may not be valid JSON. Hover a long cell and click the eye icon for the full value. Shows the newest 5000 tool calls; narrow the time range or pick a session for older ones. Honours VM, Persona, User, Model (results only; decisions carry no model), Session and Prompt. Click a Prompt to filter to that turn.",
       "datasource": {
         "type": "datasource",
         "uid": "-- Mixed --"
@@ -1679,7 +1679,7 @@
             "uid": "__expr__"
           },
           "type": "sql",
-          "expression": "SELECT\n  r.Time AS `Time`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.turn_number')) AS SIGNED) AS `Turn`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_name')) AS `Tool`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')), '') AS `Outcome`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.success')), '') AS `Success`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.duration_ms')) AS SIGNED) AS `Duration`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_extension')), '') AS `File type`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.hook_rewrote')), '') AS `Hook rewrote`,\n  COALESCE(d.decision, '') AS `Decision`,\n  COALESCE(d.access_kind, '') AS `Access`,\n  COALESCE(d.permission_mode, '') AS `Permission mode`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.model')), '') AS `Model`,\n  SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')), 1, 8) AS `Prompt`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')) AS `prompt_id`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.session_id')) AS `session_id`\nFROM R r\nLEFT JOIN (SELECT tool_use_id, MAX(decision) AS decision, MAX(access_kind) AS access_kind,\n                  MAX(permission_mode) AS permission_mode\n           FROM (SELECT JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.tool_use_id')) AS tool_use_id, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.decision')) AS decision, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.access_kind')) AS access_kind, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.permission_mode')) AS permission_mode\n                 FROM D) dd\n           GROUP BY tool_use_id) d ON d.tool_use_id = JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id'))\nORDER BY r.Time DESC, CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.event_sequence')) AS SIGNED) DESC"
+          "expression": "SELECT\n  r.Time AS `Time`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.turn_number')) AS SIGNED) AS `Turn`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_name')) AS `Tool`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_path')), '') AS `File`,\n  COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters, '') AS `Parameters`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')), '') AS `Outcome`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.success')), '') AS `Success`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.duration_ms')) AS SIGNED) AS `Duration`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_extension')), '') AS `File type`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.hook_rewrote')), '') AS `Hook rewrote`,\n  COALESCE(d.decision, '') AS `Decision`,\n  COALESCE(d.access_kind, '') AS `Access`,\n  COALESCE(d.permission_mode, '') AS `Permission mode`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.model')), '') AS `Model`,\n  SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')), 1, 8) AS `Prompt`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')) AS `prompt_id`,\n  JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.session_id')) AS `session_id`\nFROM R r\nLEFT JOIN (SELECT tool_use_id, MAX(decision) AS decision, MAX(access_kind) AS access_kind,\n                  MAX(permission_mode) AS permission_mode, MAX(tool_parameters) AS tool_parameters\n           FROM (SELECT JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.tool_use_id')) AS tool_use_id, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.decision')) AS decision, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.access_kind')) AS access_kind, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.permission_mode')) AS permission_mode,\n                        JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.tool_parameters')) AS tool_parameters\n                 FROM D) dd\n           GROUP BY tool_use_id) d ON d.tool_use_id = JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id'))\nORDER BY r.Time DESC, CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.event_sequence')) AS SIGNED) DESC"
         }
       ],
       "transformations": [],
@@ -1937,6 +1937,38 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Parameters"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 400
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "prompt_id"
             },
             "properties": [
@@ -1979,7 +2011,7 @@
       "id": 9,
       "type": "table",
       "title": "Failures",
-      "description": "Everything that went wrong in the selected session and turn, newest first: tool results whose outcome is not success, turn ends whose outcome is not completed, API responses with a stop reason other than stop / toolcalls, and events with an error_category. Kind is derived from the event attributes (Grok events have no event name). Shows the newest 5000 events; narrow the time range for older ones. Honours VM, Persona, User, Model, Session and Prompt.",
+      "description": "Everything that went wrong in the selected session and turn, newest first: tool results whose outcome is not success, turn ends whose outcome is not completed, API responses with a stop reason other than stop / toolcalls, and events with an error_category. Kind is derived from the event attributes (Grok events have no event name). File (file_path) and Parameters (tool_parameters) come from the failed tool result, as in Tool calls, and are blank for API calls and turns. They fill only when the agents run with OTEL_LOG_TOOL_DETAILS=1 or [telemetry] otel_log_tool_details = true, and show as columns only when some row in the range carries them. Hover a long cell and click the eye icon for the full value. Shows the newest 5000 events; narrow the time range for older ones. Honours VM, Persona, User, Model, Session and Prompt.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -2038,6 +2070,8 @@
               "kind": true,
               "turn_number": true,
               "tool_name": true,
+              "file_path": true,
+              "tool_parameters": true,
               "outcome": true,
               "stop_reason": true,
               "error_category": true,
@@ -2053,28 +2087,32 @@
               "kind": "Kind",
               "turn_number": "Turn",
               "tool_name": "Tool",
+              "file_path": "File",
               "outcome": "Outcome",
               "stop_reason": "Stop reason",
               "error_category": "Error",
               "duration_ms": "Duration",
               "file_extension": "File type",
               "model": "Model",
-              "prompt_short": "Prompt"
+              "prompt_short": "Prompt",
+              "tool_parameters": "Parameters"
             },
             "indexByName": {
               "Time": 0,
               "kind": 1,
               "turn_number": 2,
               "tool_name": 3,
-              "outcome": 4,
-              "stop_reason": 5,
-              "error_category": 6,
-              "duration_ms": 7,
-              "file_extension": 8,
-              "model": 9,
-              "prompt_short": 10,
-              "prompt_id": 11,
-              "session_id": 12
+              "file_path": 4,
+              "tool_parameters": 5,
+              "outcome": 6,
+              "stop_reason": 7,
+              "error_category": 8,
+              "duration_ms": 9,
+              "file_extension": 10,
+              "model": 11,
+              "prompt_short": 12,
+              "prompt_id": 13,
+              "session_id": 14
             }
           }
         },
@@ -2211,6 +2249,38 @@
                     "url": "/d/${__dashboard.uid}?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&${model:queryparam}&var-session=${__data.fields.session_id}&var-prompt=${__data.fields.prompt_id}"
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Parameters"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 400
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
               }
             ]
           },

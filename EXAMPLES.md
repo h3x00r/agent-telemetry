@@ -119,7 +119,11 @@ sum by (tool_name) (count_over_time({service_name="claude-code"} | event_name="t
 
 # Claude Code workflow runs per VM and persona (distinct workflow_run_id)
 count by (host_name, persona) (sum by (workflow_run_id, host_name, persona) (count_over_time({service_name="claude-code"} | workflow_run_id!="" [$__range])))
+
+# Claude Code Bash commands, one per line
+{service_name="claude-code"} | event_name="tool_result" | tool_name="Bash" | tool_parameters!="" | line_format "{{.tool_parameters}}" | json cmd="full_command" | line_format "{{.cmd}}"
 ```
+The last one needs `OTEL_LOG_TOOL_DETAILS=1` on the agents and returns nothing until then ([Optional detail](REFERENCE.md#optional-detail-commands-and-file-paths)). Commands show as stored, after [secret masking](REFERENCE.md#secret-masking).
 
 ## TraceQL
 

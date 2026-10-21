@@ -65,6 +65,68 @@ processors:
     limit_percentage: 80
     spike_limit_percentage: 20
 
+  # With OTEL_LOG_TOOL_DETAILS, OTEL_LOG_TOOL_CONTENT or OTEL_LOG_USER_PROMPTS on, agents send shell commands,
+  # file paths, tool input and prompts, and those can carry credentials. This masks common secret shapes in
+  # string log attributes, string log bodies, span attributes and span event attributes before anything is
+  # stored. Best effort: an unusual format gets through, and values nested in maps or lists, resource
+  # attributes and metrics are not checked. Values often sit inside JSON strings, even nested ones, so \", \\\"
+  # and \n count as delimiters. Keys that end in password, passwd, passphrase, secret, token, api_key,
+  # access_key, secret_key, secret_key_base, master_key, app_key, _PASS (upper case), pwd, credentials or
+  # private_key hold a secret (GITHUB_TOKEN=, PGPASSWORD=, DB_PASS=, not max_tokens= or TOKEN_FILE=); for the
+  # last three a value that looks like a path (/, ~ or .) stays, and for credentials a quoted word of up to
+  # 11 letters and - (fetch's 'include', 'same-origin'). A $VAR or $(...) right after =, a flag, a header name,
+  # an auth scheme or curl -u user: stays (it is not the secret itself); in a URL or a quoted value it is masked.
+  # Escaping: each regex is an OTTL string, so a regex \s is written \\s and a literal backslash \\\\;
+  # a literal $ is written $$ (collector config expansion), so $${1} reaches OTTL as ${1}.
+  transform/redact_secrets:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements: &redact_secrets
+          # private key blocks (the body starts with 40+ base64 chars), also one cut off before its END line
+          - replace_all_patterns(attributes, "value", "(-----BEGIN [A-Z0-9 ]*PRIVATE KEY(?:\\sBLOCK)?-----)(?:(?:Proc-Type|DEK-Info|Version|Comment):[^\\\\\\r\\n]*|\\s|\\\\+[nrt])*[A-Za-z0-9+/=]{40,}(?:(?:Proc-Type|DEK-Info|Version|Comment):[^\\\\\\r\\n]*|[A-Za-z0-9+/=\\s]|\\\\+[nrt])*(-----END [A-Z0-9 ]*PRIVATE KEY(?:\\sBLOCK)?-----)?", "$${1}****$${2}")
+          # Authorization (a known scheme stays), X-...-Key/-Token, PRIVATE-TOKEN, *api-key; else: 16+ chars with no dot, or a digit
+          - replace_all_patterns(attributes, "value", "(?i)((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?(?:bearer|basic|token|bot|digest|negotiate|ntlm|apikey|sso-key|aws4-hmac-sha256)(?:\\s+|%20))[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*|((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?[A-Za-z][A-Za-z0-9._-]*(?:\\s+|%20))(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)|((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?)(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)|((?:^|[^A-Za-z0-9/_.-])(?:x-[a-z0-9-]*(?:key|token|secret|auth)|private-token|[a-z0-9-]*api-?key|[a-z0-9-]*subscription-key)(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?)(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)", "$${1}$${2}$${3}$${4}****")
+          # Cookie / Set-Cookie headers whose value starts with name=
+          - replace_all_patterns(attributes, "value", "(?i)((?:^|[^A-Za-z0-9/_.-])(?:set-)?cookie(?:\\\\*[\"'])?\\s*:\\s*(?:\\\\*[\"'])?)[^\\s=;,\"'\\\\`(){}<>$$]+=[^\"'\\\\`\\r\\n]+", "$${1}****")
+          # Bearer <token> (16+ chars or a digit, so "Bearer authentication" stays)
+          - replace_all_patterns(attributes, "value", "(?i)\\b(bearer(?:\\s+|%20))(?:[A-Za-z0-9._~+/=-]{16,}|[A-Za-z0-9._~+/=-]*[0-9][A-Za-z0-9._~+/=-]*)", "$${1}****")
+          # the password in scheme://user:password@host
+          - replace_all_patterns(attributes, "value", "([A-Za-z][A-Za-z0-9+.-]*://[^\\s:@/?#\"'\\\\]*:)[^\\s/?#\"'\\\\]+@", "$${1}****@")
+          # curl -u user:password (in the same command: a \n ends it)
+          - replace_all_patterns(attributes, "value", "(\\bcurl\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s(?:-[A-Za-z]*u|--user)(?:=|\\s*)(?:\\\\*[\"'])?[^\\s:\"'\\\\]*:)[^\\s\"'\\\\$$][^\\s\"'\\\\]*", "$${1}****")
+          # key: "value", key="value" (also as \" or \\\" inside a JSON string)
+          - replace_all_patterns(attributes, "value", "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[^\"\\\\\\s),;|&\\]}+]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|((?:pwd|private[_-]?key)(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[^\"\\\\\\s),;|&\\]}+/~.]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|(credentials(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[A-Za-z-]{1,11}(?:[^A-Za-z\"\\\\-]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|[A-Za-z-]{12,}(?:[^\"\\\\]|\\\\+[^\"\\\\])*|(?:[^A-Za-z\"\\\\\\s),;|&\\]}+/~.-]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*)", "$${1}$${2}$${3}****")
+          # key: 'value', key='value' (the value ends at a " or \ too, so it stays inside a JSON string)
+          - replace_all_patterns(attributes, "value", "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')[^'\"\\\\\\s),;|&\\]}+\\r\\n][^'\"\\\\\\r\\n]*|((?:pwd|private[_-]?key)(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')[^'\"\\\\\\s),;|&\\]}+\\r\\n/~.][^'\"\\\\\\r\\n]*|(credentials(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')(?:[A-Za-z-]{1,11}[^A-Za-z'\"\\\\\\r\\n-][^'\"\\\\\\r\\n]*|[A-Za-z-]{12,}[^'\"\\\\\\r\\n]*|[^A-Za-z'\"\\\\\\s),;|&\\]}+\\r\\n/~.-][^'\"\\\\\\r\\n]*)", "$${1}$${2}$${3}****")
+          # KEY=value, key = value
+          - replace_all_patterns(attributes, "value", "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:=|\\s+=\\s*))(?:[^\\s\"'\\\\&;,|<>()`$$=/][^\\s\"'\\\\&;,|<>()`]*|/[A-Za-z0-9+][^\\s\"'\\\\&;,|<>()`]{15,})|((?:(?:pwd|private[_-]?key)|credentials)(?:=|\\s+=\\s*))[^\\s\"'\\\\&;,|<>()`$$=/~.][^\\s\"'\\\\&;,|<>()`]*", "$${1}$${2}****")
+          # --password, --token, --secret, --api-key, --client-secret ... flags, with = or a space (not --no-password)
+          - replace_all_patterns(attributes, "value", "((?:^|[^A-Za-z0-9_-])--?(?:(?:[A-Za-z0-9]{3,}|[A-Za-mo-z0-9][A-Za-z0-9]?|n[A-Za-np-z0-9])-)*(?i:password|passwd|passphrase|secret|token|api-?key|access-key|secret-key)(?:=|\\s+))(?:[^\\s\"'\\\\&;,|<>()`$$=/-][^\\s\"'\\\\&;,|<>()`]*|/[A-Za-z0-9+][^\\s\"'\\\\&;,|<>()`]{15,})", "$${1}****")
+          # aws configure set aws_secret_access_key X, docker login -p X, mysql -pX, sshpass -p X, redis-cli -a X
+          - replace_all_patterns(attributes, "value", "(\\baws\\s+configure\\s+set\\s+(?:--profile[\\s=]+[^\\s\"'\\\\]+\\s+)?(?:[A-Za-z0-9_-]+\\.)?(?:aws_secret_access_key|aws_session_token)\\s+(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\b(?:docker|podman)\\s+login\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s-p(?:=|\\s+)(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\b(?:mysql(?:dump|admin)?|mariadb)(?:\\s(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?)?\\s-p(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\bsshpass\\s+-p\\s*(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\bredis-cli\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s(?:-a|--pass)\\s+(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*", "$${1}$${2}$${3}$${4}$${5}****")
+          # token shapes and Slack / Discord webhook URLs; the prefix stays (ghp_****, sk-ant-****)
+          - replace_all_patterns(attributes, "value", "\\b(?:(gh[pousr]_)[A-Za-z0-9]{36,}|(github_pat_)[A-Za-z0-9_]{22,}|(glpat-)[A-Za-z0-9_-]{20,}|(A(?:KIA|SIA))[A-Z0-9]{16}\\b|(xox[abeposr]-)[A-Za-z0-9-]{10,}|(sk-ant-)[A-Za-z0-9_-]{20,}|(sk-(?:proj|svcacct|admin)-)[A-Za-z0-9_-]{20,}|(sk-)[A-Za-z0-9]{32,}|(xai-)[A-Za-z0-9]{20,}|(AIza)[A-Za-z0-9_-]{35}|(eyJ)[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*|(npm_)[A-Za-z0-9]{36}|(hf_)[A-Za-z0-9]{30,}|([rs]k_(?:live|test)_)[A-Za-z0-9]{20,}|(SG\\.)[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}|(hooks\\.slack\\.com/services/)[A-Za-z0-9/]+|(discord(?:app)?\\.com/api/webhooks/)[0-9]+/[A-Za-z0-9_-]+)", "$${1}$${2}$${3}$${4}$${5}$${6}$${7}$${8}$${9}$${10}$${11}$${12}$${13}$${14}$${15}$${16}$${17}****")
+      - context: log
+        statements:          # the same rules, for string bodies
+          - replace_pattern(body, "(-----BEGIN [A-Z0-9 ]*PRIVATE KEY(?:\\sBLOCK)?-----)(?:(?:Proc-Type|DEK-Info|Version|Comment):[^\\\\\\r\\n]*|\\s|\\\\+[nrt])*[A-Za-z0-9+/=]{40,}(?:(?:Proc-Type|DEK-Info|Version|Comment):[^\\\\\\r\\n]*|[A-Za-z0-9+/=\\s]|\\\\+[nrt])*(-----END [A-Z0-9 ]*PRIVATE KEY(?:\\sBLOCK)?-----)?", "$${1}****$${2}") where IsString(body)
+          - replace_pattern(body, "(?i)((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?(?:bearer|basic|token|bot|digest|negotiate|ntlm|apikey|sso-key|aws4-hmac-sha256)(?:\\s+|%20))[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*|((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?[A-Za-z][A-Za-z0-9._-]*(?:\\s+|%20))(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)|((?:^|[^A-Za-z0-9/_.-])(?:proxy-)?authorization(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?)(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)|((?:^|[^A-Za-z0-9/_.-])(?:x-[a-z0-9-]*(?:key|token|secret|auth)|private-token|[a-z0-9-]*api-?key|[a-z0-9-]*subscription-key)(?:\\\\*[\"'])?\\s*[:=]\\s*(?:\\\\*[\"'])?)(?:[^\\s\"'\\\\`,;$$.][^\\s\"'\\\\`,;.]{15,}|(?:[^\\s\"'\\\\`,;$$][^\\s\"'\\\\`,;]*)?[0-9][^\\s\"'\\\\`,;]*)", "$${1}$${2}$${3}$${4}****") where IsString(body)
+          - replace_pattern(body, "(?i)((?:^|[^A-Za-z0-9/_.-])(?:set-)?cookie(?:\\\\*[\"'])?\\s*:\\s*(?:\\\\*[\"'])?)[^\\s=;,\"'\\\\`(){}<>$$]+=[^\"'\\\\`\\r\\n]+", "$${1}****") where IsString(body)
+          - replace_pattern(body, "(?i)\\b(bearer(?:\\s+|%20))(?:[A-Za-z0-9._~+/=-]{16,}|[A-Za-z0-9._~+/=-]*[0-9][A-Za-z0-9._~+/=-]*)", "$${1}****") where IsString(body)
+          - replace_pattern(body, "([A-Za-z][A-Za-z0-9+.-]*://[^\\s:@/?#\"'\\\\]*:)[^\\s/?#\"'\\\\]+@", "$${1}****@") where IsString(body)
+          - replace_pattern(body, "(\\bcurl\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s(?:-[A-Za-z]*u|--user)(?:=|\\s*)(?:\\\\*[\"'])?[^\\s:\"'\\\\]*:)[^\\s\"'\\\\$$][^\\s\"'\\\\]*", "$${1}****") where IsString(body)
+          - replace_pattern(body, "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[^\"\\\\\\s),;|&\\]}+]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|((?:pwd|private[_-]?key)(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[^\"\\\\\\s),;|&\\]}+/~.]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|(credentials(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*\\\\*\")(?:[A-Za-z-]{1,11}(?:[^A-Za-z\"\\\\-]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*|[A-Za-z-]{12,}(?:[^\"\\\\]|\\\\+[^\"\\\\])*|(?:[^A-Za-z\"\\\\\\s),;|&\\]}+/~.-]|\\\\+[^\"\\\\])(?:[^\"\\\\]|\\\\+[^\"\\\\])*)", "$${1}$${2}$${3}****") where IsString(body)
+          - replace_pattern(body, "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')[^'\"\\\\\\s),;|&\\]}+\\r\\n][^'\"\\\\\\r\\n]*|((?:pwd|private[_-]?key)(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')[^'\"\\\\\\s),;|&\\]}+\\r\\n/~.][^'\"\\\\\\r\\n]*|(credentials(?:\\\\*[\"'])?\\s*(?:=>|:=|[:=])\\s*')(?:[A-Za-z-]{1,11}[^A-Za-z'\"\\\\\\r\\n-][^'\"\\\\\\r\\n]*|[A-Za-z-]{12,}[^'\"\\\\\\r\\n]*|[^A-Za-z'\"\\\\\\s),;|&\\]}+\\r\\n/~.-][^'\"\\\\\\r\\n]*)", "$${1}$${2}$${3}****") where IsString(body)
+          - replace_pattern(body, "(?i)((?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|secret[_-]?key[_-]?base|master[_-]?key|app[_-]?key|(?-i:[_-]PASS))(?:=|\\s+=\\s*))(?:[^\\s\"'\\\\&;,|<>()`$$=/][^\\s\"'\\\\&;,|<>()`]*|/[A-Za-z0-9+][^\\s\"'\\\\&;,|<>()`]{15,})|((?:(?:pwd|private[_-]?key)|credentials)(?:=|\\s+=\\s*))[^\\s\"'\\\\&;,|<>()`$$=/~.][^\\s\"'\\\\&;,|<>()`]*", "$${1}$${2}****") where IsString(body)
+          - replace_pattern(body, "((?:^|[^A-Za-z0-9_-])--?(?:(?:[A-Za-z0-9]{3,}|[A-Za-mo-z0-9][A-Za-z0-9]?|n[A-Za-np-z0-9])-)*(?i:password|passwd|passphrase|secret|token|api-?key|access-key|secret-key)(?:=|\\s+))(?:[^\\s\"'\\\\&;,|<>()`$$=/-][^\\s\"'\\\\&;,|<>()`]*|/[A-Za-z0-9+][^\\s\"'\\\\&;,|<>()`]{15,})", "$${1}****") where IsString(body)
+          - replace_pattern(body, "(\\baws\\s+configure\\s+set\\s+(?:--profile[\\s=]+[^\\s\"'\\\\]+\\s+)?(?:[A-Za-z0-9_-]+\\.)?(?:aws_secret_access_key|aws_session_token)\\s+(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\b(?:docker|podman)\\s+login\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s-p(?:=|\\s+)(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\b(?:mysql(?:dump|admin)?|mariadb)(?:\\s(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?)?\\s-p(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\bsshpass\\s+-p\\s*(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*|(\\bredis-cli\\b(?:[^|;&\\r\\n\\\\]|\\\\[^nr])*?\\s(?:-a|--pass)\\s+(?:\\\\*[\"'])?)[^\\s\"'\\\\$$-][^\\s\"'\\\\]*", "$${1}$${2}$${3}$${4}$${5}****") where IsString(body)
+          - replace_pattern(body, "\\b(?:(gh[pousr]_)[A-Za-z0-9]{36,}|(github_pat_)[A-Za-z0-9_]{22,}|(glpat-)[A-Za-z0-9_-]{20,}|(A(?:KIA|SIA))[A-Z0-9]{16}\\b|(xox[abeposr]-)[A-Za-z0-9-]{10,}|(sk-ant-)[A-Za-z0-9_-]{20,}|(sk-(?:proj|svcacct|admin)-)[A-Za-z0-9_-]{20,}|(sk-)[A-Za-z0-9]{32,}|(xai-)[A-Za-z0-9]{20,}|(AIza)[A-Za-z0-9_-]{35}|(eyJ)[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*|(npm_)[A-Za-z0-9]{36}|(hf_)[A-Za-z0-9]{30,}|([rs]k_(?:live|test)_)[A-Za-z0-9]{20,}|(SG\\.)[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}|(hooks\\.slack\\.com/services/)[A-Za-z0-9/]+|(discord(?:app)?\\.com/api/webhooks/)[0-9]+/[A-Za-z0-9_-]+)", "$${1}$${2}$${3}$${4}$${5}$${6}$${7}$${8}$${9}$${10}$${11}$${12}$${13}$${14}$${15}$${16}$${17}****") where IsString(body)
+    trace_statements:
+      - context: span
+        statements: *redact_secrets
+      - context: spanevent
+        statements: *redact_secrets
+
   # Grok Build ignores OTEL_RESOURCE_ATTRIBUTES, so its data carries no host.name or persona. nexus sends both
   # as request headers with every grok export (X-Nexus-Host, X-Nexus-Persona); these put them where Claude Code
   # puts its own: host.name on the resource (the Prometheus and Loki label host_name), persona on each datapoint
@@ -183,7 +245,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter]
+      processors: [memory_limiter, transform/redact_secrets]
       exporters: [otlp_grpc/tempo]
     metrics:
       receivers: [otlp]
@@ -191,6 +253,6 @@ service:
       exporters: [otlp_http/prometheus]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, resource/nexus, attributes/nexus, transform/dedup_resource_attrs]
+      processors: [memory_limiter, transform/redact_secrets, resource/nexus, attributes/nexus, transform/dedup_resource_attrs]
       exporters: [otlp_http/loki]
 

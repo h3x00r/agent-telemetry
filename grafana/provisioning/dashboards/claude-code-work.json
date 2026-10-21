@@ -1431,7 +1431,7 @@
       "id": 4,
       "type": "table",
       "title": "Shell commands",
-      "description": "One row per program (argv[0], e.g. git, sed, python) and command class run through the Bash tool, with the number of calls, from claude_code.tool trace spans in Tempo (TraceQL metrics). Follows VM, User, Environment (spans without an environment always match) and Session; ignores Prompt (spans carry no prompt_id) and Model. Spans without user.email are dropped by the User filter. Tempo answers TraceQL metrics for at most 14 days (query_frontend.metrics.max_duration in tempo.yaml); longer ranges show an error here.",
+      "description": "One row per program (argv[0], e.g. git, sed, python) and command class run through the Bash tool, with the number of calls, from claude_code.tool trace spans in Tempo (TraceQL metrics). Follows VM, User, Environment (spans without an environment always match) and Session; ignores Prompt (spans carry no prompt_id) and Model. Spans without user.email are dropped by the User filter. Full command (span.full_command) appears only when the agents run with OTEL_LOG_TOOL_DETAILS=1. Then each distinct command line is its own row and Calls counts runs of that exact text; spans recorded without it keep an empty Full command. Tempo keeps the first 2 KB of a command (distributor max_attribute_bytes). Tempo answers TraceQL metrics for at most 14 days (query_frontend.metrics.max_duration in tempo.yaml); longer ranges show an error here.",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -1451,7 +1451,7 @@
           },
           "queryType": "traceql",
           "metricsQueryType": "instant",
-          "query": "{ resource.service.name = \"claude-code\" && resource.host.name =~ \"${host:pipe}\" && span.user.email =~ \"${user:pipe}\" && (resource.deployment.environment.name =~ \"${env:pipe}\" || resource.deployment.environment.name = nil) && span.session.id =~ \"${session:regex}\" && span.bash_argv0 != nil } | count_over_time() by (span.bash_argv0, span.bash_command_class)"
+          "query": "{ resource.service.name = \"claude-code\" && resource.host.name =~ \"${host:pipe}\" && span.user.email =~ \"${user:pipe}\" && (resource.deployment.environment.name =~ \"${env:pipe}\" || resource.deployment.environment.name = nil) && span.session.id =~ \"${session:regex}\" && span.bash_argv0 != nil } | count_over_time() by (span.bash_argv0, span.bash_command_class, span.full_command)"
         }
       ],
       "transformations": [
@@ -1491,24 +1491,37 @@
           }
         },
         {
+          "id": "extractFields",
+          "options": {
+            "source": "span.full_command",
+            "format": "regexp",
+            "regExp": "/^\"?(?<Full_command>[\\s\\S]*?)\"?$/",
+            "replace": false
+          }
+        },
+        {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Field": true,
               "span.bash_argv0": true,
-              "span.bash_command_class": true
+              "span.bash_command_class": true,
+              "span.full_command": true
             },
             "includeByName": {
               "Command": true,
               "Class": true,
+              "Full_command": true,
               "Total": true
             },
             "indexByName": {
               "Command": 0,
               "Class": 1,
-              "Total": 2
+              "Full_command": 2,
+              "Total": 3
             },
             "renameByName": {
+              "Full_command": "Full command",
               "Total": "Calls"
             }
           }
@@ -1547,6 +1560,26 @@
               {
                 "id": "decimals",
                 "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Full command"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 360
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "noValue",
+                "value": ""
               }
             ]
           }
@@ -3113,7 +3146,7 @@
       "id": 9,
       "type": "table",
       "title": "Tool calls",
-      "description": "One row per tool call (Loki tool_result event) for the selected Session and Prompt (ignores Model), newest first: tool, success and error type, duration, input/output size, permission decision and its source, and the Workflow it ran in (\"custom\" for user-defined workflows). Shows the newest 5000 tool calls; narrow the time range or pick a session or prompt for older ones. Click a Prompt to select it, or a Trace to open the prompt's trace in Tempo.",
+      "description": "One row per tool call (Loki tool_result event) for the selected Session and Prompt (ignores Model), newest first: tool, success and error type, duration, input/output size, permission decision and its source, and the Workflow it ran in (\"custom\" for user-defined workflows). Command (full_command from tool_parameters), File (file_path from tool_input) and Input (the raw tool_input JSON: URLs, patterns, MCP arguments) appear only when the agents run with OTEL_LOG_TOOL_DETAILS=1. Claude Code shortens long strings in tool_input and cuts it at about 4 KB; a cut value is not valid JSON, so File stays empty and Input shows the start. Hover a long cell and click the eye icon for the full value. Shows the newest 5000 tool calls; narrow the time range or pick a session or prompt for older ones. Click a Prompt to select it, or a Trace to open the prompt's trace in Tempo.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -3149,6 +3182,22 @@
           }
         },
         {
+          "id": "extractFields",
+          "options": {
+            "source": "tool_parameters",
+            "format": "json",
+            "replace": false
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "tool_input",
+            "format": "json",
+            "replace": false
+          }
+        },
+        {
           "id": "convertFieldType",
           "options": {
             "fields": {},
@@ -3175,6 +3224,8 @@
             "includeByName": {
               "Time": true,
               "tool_name": true,
+              "full_command": true,
+              "file_path": true,
               "success": true,
               "error_type": true,
               "duration_ms": true,
@@ -3185,27 +3236,33 @@
               "workflow_name": true,
               "prompt_short": true,
               "trace_id": true,
+              "tool_input": true,
               "prompt_id": true,
               "session_id": true
             },
             "indexByName": {
               "Time": 0,
               "tool_name": 1,
-              "success": 2,
-              "error_type": 3,
-              "duration_ms": 4,
-              "tool_input_size_bytes": 5,
-              "tool_result_size_bytes": 6,
-              "decision_type": 7,
-              "decision_source": 8,
-              "workflow_name": 9,
-              "prompt_short": 10,
-              "trace_id": 11,
-              "prompt_id": 12,
-              "session_id": 13
+              "full_command": 2,
+              "file_path": 3,
+              "success": 4,
+              "error_type": 5,
+              "duration_ms": 6,
+              "tool_input_size_bytes": 7,
+              "tool_result_size_bytes": 8,
+              "decision_type": 9,
+              "decision_source": 10,
+              "workflow_name": 11,
+              "prompt_short": 12,
+              "trace_id": 13,
+              "tool_input": 14,
+              "prompt_id": 15,
+              "session_id": 16
             },
             "renameByName": {
               "tool_name": "Tool",
+              "full_command": "Command",
+              "file_path": "File",
               "success": "Success",
               "error_type": "Error",
               "duration_ms": "Duration",
@@ -3215,7 +3272,8 @@
               "decision_source": "Decision source",
               "workflow_name": "Workflow",
               "prompt_short": "Prompt",
-              "trace_id": "Trace"
+              "trace_id": "Trace",
+              "tool_input": "Input"
             }
           }
         },
@@ -3438,6 +3496,54 @@
             "properties": [
               {
                 "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Command"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Input"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 400
+              },
+              {
+                "id": "custom.inspect",
                 "value": true
               }
             ]

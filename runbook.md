@@ -40,6 +40,8 @@ A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the
 | Drilldown apps missing in Grafana | No internet on first start | Allow outbound HTTPS, then `docker compose restart grafana`. |
 | Work log **Shell commands**: `metrics query time range exceeds the maximum allowed duration of 24h0m0s` | Tempo still runs an older `tempo.yaml` | `docker compose restart tempo`. |
 | Flow timeline has no persona rows | The data has no persona | See [Personas](REFERENCE.md#personas). |
+| A secret shows in Grafana (a command, path, tool input or prompt) | Masking doesn't know its format ([what it misses](REFERENCE.md#secret-masking)), or the collector wasn't restarted after the rules changed | Rotate the secret: masking never changes stored data, which stays until retention removes it. Then [add a pattern](#change-secret-masking). |
+| A value shows as `****` but isn't a secret | A masking rule matched it, e.g. `docker build --secret id=x` or `printf 'X_TOKEN=%s'` | [Narrow that rule](#change-secret-masking). The masked text can't be recovered. |
 
 ## Apply a change
 
@@ -56,13 +58,21 @@ Then apply the change. After applying, `docker compose ps -a` shows the service 
 
 | Changed | Run | Note |
 |---|---|---|
-| `otel-collector/config.yaml` | `docker compose restart otel-collector` | Resets delta→cumulative state; `increase()` treats it as a counter reset. |
+| `otel-collector/config.yaml` | `docker compose restart otel-collector` | Resets delta→cumulative state; `increase()` treats it as a counter reset. Masking rules apply to data received after the restart. |
 | `prometheus/prometheus.yml` | `docker compose kill -s SIGHUP prometheus` | `docker compose logs --since 1m prometheus` shows "Completed loading of configuration file". |
 | `loki/loki.yaml`, `tempo/tempo.yaml` | `docker compose restart loki` (or `tempo`) | The collector queues data while it is down. |
 | `grafana/provisioning/datasources/` | `docker compose restart grafana` | Only `datasources/` and `dashboards/` are mounted; a new provisioning folder also needs a volume line in `compose.yaml`. |
 | `grafana/provisioning/dashboards/*.json` | Nothing | Grafana reloads it within a minute. |
 | `compose.yaml` (including command-line flags), `.env` | `docker compose up -d --wait` | Recreates changed services. `restart` keeps the old flags and `.env`. |
 | Several files, e.g. after `git pull` | `docker compose up -d --wait --force-recreate` | Recreates every service; data stays in the volumes. |
+
+## Change secret masking
+
+The `transform/redact_secrets` processor in `otel-collector/config.yaml` masks secret shapes in logs and traces ([what it masks](REFERENCE.md#secret-masking)).
+1. Edit the rule in both lists: the attribute list (`&redact_secrets`, also used for spans and span events) and the `replace_pattern(body, …)` list below it. Each regex is an OTTL string in YAML: a regex `\s` is written `\\s`, and a `$` is written `$$`. The comment above the processor explains it.
+2. [Validate](#apply-a-change). The collector's `validate` fails on a broken regex and on a `${…}` written with a single `$`. It doesn't catch other single `$`, so always write a group as `$${1}`.
+3. `docker compose restart otel-collector`. The collector reads its config only on start.
+4. Check: run the [smoke test](EXAMPLES.md#smoke-test) with its log line `"smoke test"` changed to `"smoke test password=not-a-real-secret"`. Loki must show `smoke test password=****`.
 
 ## Add an agent VM
 
