@@ -21,13 +21,14 @@ A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Agent gets 401 / `Unauthenticated` | Missing or wrong token | The header must be exactly `Authorization=Bearer <OTLP_BEARER_TOKEN>`, with a capital B. |
-| `unable to verify the first certificate` (Claude Code) | CA not trusted | Set `NODE_EXTRA_CA_CERTS=/etc/otel/otel-ca.crt`. Claude Code ignores `OTEL_EXPORTER_OTLP_CERTIFICATE`. |
+| Agent gets 401 / `Unauthenticated` | Missing or wrong token | nexus: give the token again (`nexus --config` → `telemetry`), then `nexus <persona> restart`. By hand: the header must be exactly `Authorization=Bearer <OTLP_BEARER_TOKEN>`, with a capital B. |
+| `unable to verify the first certificate` (Claude Code) | CA not trusted | nexus: give the server's `otel-ca.crt` again (`nexus --config` → `telemetry`), then `nexus <persona> restart`. By hand: set `NODE_EXTRA_CA_CERTS=/etc/otel/otel-ca.crt`; Claude Code ignores `OTEL_EXPORTER_OTLP_CERTIFICATE`. |
+| `telemetry: …` warning from `nexus --config` | The test export failed | The message names the cause (address, token or CA); see the [nexus troubleshooting](https://github.com/h3x00r/agent/blob/main/runbook.md#telemetry-opentelemetry). |
 | `Setting the TLS ServerName to an IP address is not permitted` | gRPC to an IP | Use a name from `TLS_SANS`, or `http/protobuf`. |
 | `Hostname/IP does not match certificate's altnames` (Go: `certificate is valid for …, not …`) | Name not in `TLS_SANS` | Add it, then [re-issue](#change-tls-names-or-renew-the-server-cert). |
 | Connection refused or timeout | Stack down, DNS or firewall | Server: `docker compose ps -a`, `sudo iptables -nvL DOCKER-USER`. Agent VM: `getent hosts telemetry.lair.dev`. |
 | HTTP 400 `Client sent an HTTP request to an HTTPS server.` | `http://` endpoint | Use `https://`. |
-| Data has no `host_name` label (Grok Build: `(none)` on its dashboard) | `host.name` not set | Add it to `OTEL_RESOURCE_ATTRIBUTES`. Grok Build ignores that: send the `X-Nexus-Host` and `X-Nexus-Persona` headers ([Grok Build](REFERENCE.md#agent-configuration-grok-build)). |
+| Data has no `host_name` label (Grok Build: `(none)` on its dashboard) | `host.name` not set | nexus sets it. By hand: add it to `OTEL_RESOURCE_ATTRIBUTES`. Grok Build ignores that: send the `X-Nexus-Host` and `X-Nexus-Persona` headers ([Grok Build](REFERENCE.md#agent-configuration-grok-build)). |
 | No traces from Claude Code | Beta tracing off | Set `OTEL_TRACES_EXPORTER=otlp` and `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. |
 | `claude_code.interaction` root span missing in `-p` runs | Client-side race | Known issue; nothing to fix on the server. |
 | `otelcol_exporter_queue_size` keeps growing | A backend is down or slow | `docker compose ps -a`; `docker compose logs <backend>`. The queue drains once the backend is back. |
@@ -84,12 +85,14 @@ Follow [README step 2](README.md#2-connect-an-agent-vm), then [step 3](README.md
 
 1. Generate a token: `docker compose run --rm -T --no-deps certs openssl rand -hex 32`
 2. Set `OTLP_BEARER_TOKEN` in `.env`, then run `docker compose up -d --wait otel-collector`.
-3. **On every agent VM, as root**, then restart running Claude Code sessions. Until then, those agents get 401 and their data is dropped.
+3. **On every agent VM**: `nexus --config` → `telemetry`, paste the new token, then `nexus <persona> restart` for each persona it names. Until then, those agents get 401 and their data is dropped.
+
+Without nexus, Claude Code: as root, then restart running Claude Code sessions.
 ```sh
 NEW='<NEW_TOKEN>'
 sed -i "s/Bearer [0-9a-f]*/Bearer $NEW/" /etc/claude-code/managed-settings.d/50-otel.json
 ```
-Grok Build: update the token in the persona's telemetry settings (`nexus --config`) or in `OTEL_EXPORTER_OTLP_METRICS_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` ([Grok Build](REFERENCE.md#agent-configuration-grok-build)), then restart grok.
+Grok Build without nexus: update the token in `OTEL_EXPORTER_OTLP_METRICS_HEADERS` / `OTEL_EXPORTER_OTLP_LOGS_HEADERS` ([Grok Build](REFERENCE.md#agent-configuration-grok-build)), then restart grok.
 
 ## Change TLS names or renew the server cert
 

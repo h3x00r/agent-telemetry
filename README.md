@@ -9,7 +9,7 @@ agent VMs ──OTLP──▶ otel-collector ──▶ Prometheus (metrics) / Lo
 You need:
 - **One server**: a Linux host with Docker (Compose v2). Agents must reach its ports 4317 and 4318, and your browser port 3000. The first start needs outbound HTTPS. Run the server commands as root or as a user in the `docker` group.
 - **A server name** that the agent VMs and your browser resolve: a DNS `A` record, or `192.0.2.10 telemetry.lair.dev` in their `/etc/hosts`.
-- **Agent VMs**: the machines running Claude Code, with root access.
+- **Agent VMs**: the machines running Claude Code or Grok Build in [nexus](https://github.com/h3x00r/agent) personas, set up as its runbook describes. Without nexus, see [Agent configuration](REFERENCE.md#agent-configuration-claude-code).
 
 The commands below use the server name `telemetry.lair.dev` and IP `192.0.2.10`. Replace both with yours.
 
@@ -47,45 +47,40 @@ Open `https://telemetry.lair.dev:3000` (or `https://192.0.2.10:3000`) and log in
 
 ### 2. Connect an agent VM
 
-Once per VM. **On the server**, in the repo directory: print the token, and copy the CA to the VM.
+Once per VM. nexus writes all the agent settings itself; it needs only the server's address, the token and the CA.
+
+**On the server**, in the repo directory: print the token, and copy the CA to the VM.
 ```sh
 sed -n 's/^OTLP_BEARER_TOKEN=//p' .env
 scp otel-ca.crt <vm>:
 ```
 
-**On the VM**, in the directory holding `otel-ca.crt` (scp put it in your home directory), run `sudo -s`, then the block below. Paste the token printed on the server. The endpoint can also be `https://192.0.2.10:4318`.
+**On the VM**, as the user who runs nexus:
 ```sh
-TOKEN='<OTLP_BEARER_TOKEN>'
-install -D -m 0644 otel-ca.crt /etc/otel/otel-ca.crt
-install -d /etc/claude-code/managed-settings.d
-cat > /etc/claude-code/managed-settings.d/50-otel.json <<EOF
-{
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-    "OTEL_METRICS_EXPORTER": "otlp",
-    "OTEL_LOGS_EXPORTER": "otlp",
-    "OTEL_TRACES_EXPORTER": "otlp",
-    "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
-    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://telemetry.lair.dev:4318",
-    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer $TOKEN",
-    "NODE_EXTRA_CA_CERTS": "/etc/otel/otel-ca.crt",
-    "OTEL_RESOURCE_ATTRIBUTES": "host.name=$(hostname -s),deployment.environment.name=prod"
-  }
-}
-EOF
+nexus --config
 ```
-This enables telemetry for every Claude Code user on the VM. Restart Claude Code sessions that were already running.
+Pick `telemetry` in the menu, then answer:
+1. the collector's address: `https://telemetry.lair.dev:4318` (or `https://192.0.2.10:4318`);
+2. its bearer token: paste the one printed on the server. Nothing shows as you type;
+3. the CA file: `~/otel-ca.crt`, where scp put it. nexus keeps a copy of its own;
+4. `y` for each persona that should send;
+5. `none` for tool details and tool content, unless you want them: see [Optional detail](REFERENCE.md#optional-detail-commands-and-file-paths).
+
+nexus then sends a test export and prints `-- telemetry: https://telemetry.lair.dev:4318 took a test export with the token`, or what is wrong. Restart each persona it names (this ends its tmux sessions):
+```sh
+nexus <persona> restart
+```
+nexus labels the data with the VM (`host.name`) and the persona, so the VM and persona filters and the flow timelines work without more setup. To script it, use `nexus --config --yes` with the `--telemetry-*` options from the [nexus runbook](https://github.com/h3x00r/agent/blob/main/runbook.md#telemetry-opentelemetry).
 
 ### 3. Check that data arrives
 
-**On the VM**, as any user:
+**On the VM**, from a project directory:
 ```sh
-claude -p hi
+nexus <persona> headless hi
 ```
-Wait about a minute, then reload Grafana. The VM's `hostname -s` appears in the **Claude Code** dashboard's **VM** filter, and **Sessions** counts the run.
+Wait about a minute, then reload Grafana. The VM's `hostname -s` appears in the **VM** filter of the **Claude Code** dashboard (or **Grok Build**, for a grok persona), and **Sessions** counts the run.
 
-Nothing? See [Troubleshooting](runbook.md#troubleshooting). To test the connection without Claude Code, run the [smoke test](EXAMPLES.md#smoke-test).
+Nothing? See [Troubleshooting](runbook.md#troubleshooting). To test the connection without an agent, run the [smoke test](EXAMPLES.md#smoke-test).
 
 ## View the data
 
@@ -127,7 +122,7 @@ To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on th
 | Add a server name or IP | [Change TLS names](runbook.md#change-tls-names-or-renew-the-server-cert) |
 | Reset the Grafana password | [Reset the Grafana admin password](runbook.md#reset-the-grafana-admin-password) |
 | Back up, upgrade, wipe | [Back up and restore](runbook.md#back-up-and-restore) |
-| Send Grok Build's data, labelled by VM and persona | [Agent configuration (Grok Build)](REFERENCE.md#agent-configuration-grok-build) |
+| Send Claude Code's or Grok Build's data without nexus | [Agent configuration (Claude Code)](REFERENCE.md#agent-configuration-claude-code), [(Grok Build)](REFERENCE.md#agent-configuration-grok-build) |
 | Send data from another app (Python, Node.js…) | [Other OTel SDKs](EXAMPLES.md#other-otel-sdks) |
 | Ports, TLS, limits, how it works | [REFERENCE.md](REFERENCE.md) |
 | Check for secrets before pushing | `tests/secrets.sh`: [Scan for secrets](runbook.md#scan-for-secrets) |

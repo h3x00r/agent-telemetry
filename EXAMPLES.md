@@ -4,10 +4,10 @@ Test payloads and queries. Paste PromQL, LogQL and TraceQL into Grafana → Expl
 
 ## Smoke test
 
-Run on an agent VM that has the CA at `/etc/otel/otel-ca.crt` ([README step 2](README.md#2-connect-an-agent-vm)). The script sends one metric, one log record and one span. Expect `{"partialSuccess":{}} 200` three times. `OTLP` can also be `https://192.0.2.10:4318`.
+Run on an agent VM that has the server's CA in `~/otel-ca.crt` ([README step 2](README.md#2-connect-an-agent-vm); `/etc/otel/otel-ca.crt` if you set it up by hand). The script sends one metric, one log record and one span. Expect `{"partialSuccess":{}} 200` three times. `OTLP` can also be `https://192.0.2.10:4318`.
 
 ```sh
-OTLP=https://telemetry.lair.dev:4318; TOKEN='<OTLP_BEARER_TOKEN>'; CA=/etc/otel/otel-ca.crt
+OTLP=https://telemetry.lair.dev:4318; TOKEN='<OTLP_BEARER_TOKEN>'; CA=~/otel-ca.crt
 NOW=$(date +%s%N); TRACE=$(openssl rand -hex 16); SPAN=$(openssl rand -hex 8)
 RES='"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"smoke-test"}},{"key":"host.name","value":{"stringValue":"'$(hostname -s)'"}}]}'
 post() { curl -sS --cacert "$CA" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -w ' %{http_code}\n' "$OTLP/v1/$1" -d "$2"; }

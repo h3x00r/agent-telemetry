@@ -49,7 +49,31 @@ docker compose run --rm -T --no-deps certs cat /tls/ca.crt > otel-ca.crt   # exp
 
 ## Agent configuration (Claude Code)
 
-[README step 2](README.md#2-connect-an-agent-vm) writes these settings to `/etc/claude-code/managed-settings.d/50-otel.json`, which applies to every user on the VM and needs no shell env (including `NODE_EXTRA_CA_CERTS`). Managed-settings values are literal (no shell expansion), so `host.name` is rendered per VM when the file is written. Verified with Claude Code 2.1.302.
+In a nexus persona, [README step 2](README.md#2-connect-an-agent-vm) is all it takes: `nexus --config` writes these settings into a managed-settings drop-in that it mounts into the persona, with `host.name` (the VM) and `persona` as resource attributes, and no `deployment.environment.name` (the **Environment** filter then offers only All).
+
+Without nexus, as root on the VM, in the directory holding `otel-ca.crt`. This writes the settings to a managed-settings drop-in, which applies to every user on the VM and needs no shell env (including `NODE_EXTRA_CA_CERTS`). Managed-settings values are literal (no shell expansion), so `host.name` is rendered per VM when the file is written. Verified with Claude Code 2.1.302.
+```sh
+TOKEN='<OTLP_BEARER_TOKEN>'
+install -D -m 0644 otel-ca.crt /etc/otel/otel-ca.crt
+install -d /etc/claude-code/managed-settings.d
+cat > /etc/claude-code/managed-settings.d/50-otel.json <<EOF
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_TRACES_EXPORTER": "otlp",
+    "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://telemetry.lair.dev:4318",
+    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer $TOKEN",
+    "NODE_EXTRA_CA_CERTS": "/etc/otel/otel-ca.crt",
+    "OTEL_RESOURCE_ATTRIBUTES": "host.name=$(hostname -s),deployment.environment.name=prod"
+  }
+}
+EOF
+```
+Restart Claude Code sessions that were already running. Check with `claude -p hi`, as any user.
 
 Without root, set the same values in the user's shell environment instead:
 ```sh
@@ -86,7 +110,7 @@ Any other OTel SDK works too: see [EXAMPLES.md](EXAMPLES.md#other-otel-sdks).
 ## Agent configuration (Grok Build)
 
 Grok Build (`grok`) sends metrics and events (OTLP logs), no traces. A nexus persona gets it from `nexus --config`
-(its telemetry action). By hand, set the same in the environment grok starts in:
+([README step 2](README.md#2-connect-an-agent-vm)). By hand, set the same in the environment grok starts in:
 ```sh
 export GROK_EXTERNAL_OTEL=1
 export OTEL_METRICS_EXPORTER=otlp
@@ -140,8 +164,8 @@ Besides its main dashboard, each agent has a **work log** (`claude-code-work.jso
 
 ### Personas
 
-The flow timelines repeat a row per persona; data without one shows only as `(none)` in the overview.
-- Claude Code: add `persona=<name>` to `OTEL_RESOURCE_ATTRIBUTES`, e.g. `host.name=$(hostname -s),deployment.environment.name=prod,persona=<name>` in README step 2.
+The flow timelines repeat a row per persona; data without one shows only as `(none)` in the overview. nexus sets the persona for both agents. By hand:
+- Claude Code: add `persona=<name>` to `OTEL_RESOURCE_ATTRIBUTES`, e.g. `host.name=$(hostname -s),deployment.environment.name=prod,persona=<name>` ([Agent configuration (Claude Code)](#agent-configuration-claude-code)).
 - Grok Build ignores `OTEL_RESOURCE_ATTRIBUTES`: send the `X-Nexus-Persona` header ([Agent configuration (Grok Build)](#agent-configuration-grok-build)).
 
 ### Optional detail: commands and file paths
@@ -156,7 +180,7 @@ Both agents report which tool ran, not what it did. These agent-side settings ad
 | `OTEL_LOG_TOOL_CONTENT=1` | Both | Claude Code: a `tool.output` event on its trace spans with what the tool returned: Read and Write content, the Edit patch, the Bash command and output, MCP and web results (Edit and Write also need `OTEL_LOG_TOOL_DETAILS`; tracing must be on). Grok Build: tool input, output, the full command and failure error messages on events | File contents, command output, fetched pages |
 | `OTEL_LOG_USER_PROMPTS=1` | Both | Prompt and response text (responses can be set on their own with `OTEL_LOG_ASSISTANT_RESPONSES`) | Everything typed |
 
-Set them with the other telemetry settings (Claude Code: the managed-settings `env` block; Grok Build: its environment), then restart the agent sessions. The collector masks common secret shapes in these fields before they are stored ([Secret masking](#secret-masking)). Loki rejects a record whose structured metadata exceeds 256KB, and the record is lost ([runbook](runbook.md#troubleshooting)). Claude Code sends each prompt twice (`prompt`, `prompt_text`) with no size cap, so the collector keeps one copy.
+With nexus, turn on tool details and tool content with its **Tool details too** and **Tool content too** questions (`nexus --config` → `telemetry`), then `nexus <persona> restart`; nexus has no setting for prompts. By hand, set them with the other telemetry settings (Claude Code: the managed-settings `env` block; Grok Build: its environment), then restart the agent sessions. The collector masks common secret shapes in these fields before they are stored ([Secret masking](#secret-masking)). Loki rejects a record whose structured metadata exceeds 256KB, and the record is lost ([runbook](runbook.md#troubleshooting)). Claude Code sends each prompt twice (`prompt`, `prompt_text`) with no size cap, so the collector keeps one copy.
 
 With tool details on, the work logs show these columns. Most appear once some row in the time range carries their field, so with details off they are absent, not empty. Grok Build's **Tool calls** always shows **File** and **Parameters**, empty until details are on.
 - Claude Code **Tool calls**: **Command** (`full_command` from `tool_parameters`), **File** (`file_path` from `tool_input`) and **Input** (the raw `tool_input`: URLs, patterns, MCP arguments). Claude Code shortens long strings in `tool_input` and cuts it at about 4 KB. A cut value is not valid JSON, so **File** stays empty and **Input** shows the start.
