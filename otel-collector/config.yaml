@@ -150,6 +150,9 @@ processors:
 
   # Claude Code copies OTEL_RESOURCE_ATTRIBUTES onto every log record; drop the copies that
   # equal the resource value so Loki doesn't store them again as *_extracted metadata.
+  # Its user_prompt event also carries the prompt twice (prompt, prompt_text) with no size cap;
+  # with OTEL_LOG_USER_PROMPTS on, a long prompt stored twice can pass Loki's 256KB
+  # structured-metadata limit, and Loki then drops the whole record. Keep one copy.
   transform/dedup_resource_attrs:
     error_mode: ignore
     log_statements:
@@ -157,6 +160,7 @@ processors:
         statements:
           - delete_key(attributes, "host.name") where attributes["host.name"] == resource.attributes["host.name"]
           - delete_key(attributes, "deployment.environment.name") where attributes["deployment.environment.name"] == resource.attributes["deployment.environment.name"]
+          - delete_key(attributes, "prompt_text") where attributes["prompt_text"] == attributes["prompt"]
 
 exporters:
   otlp_http/prometheus:

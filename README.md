@@ -96,15 +96,16 @@ After login, Grafana shows the **Claude Code** dashboard.
 
 Grok Build has its own **Grok Build** dashboard, with filters for **VM**, **Persona**, **User** and **Model**; its **Startup** row starts collapsed. Switch dashboards with the **Agent telemetry** menu at the top of any of them, or open them from **Dashboards → Agent telemetry**.
 
-Each agent also has two more dashboards:
+Each agent also has three more dashboards:
 - **Work log** (**Claude Code work log**, **Grok Build work log**): tables of what each session did. Click a session to see its prompts (Grok Build: turns), tool calls and, for Claude Code, shell commands, edits and workflow runs; click a prompt to narrow the tool tables to it.
 - **Flow timeline** (**Claude Code flow timeline**, **Grok Build flow timeline**): one row per persona, showing over time when it prompted, called the model, used each tool, and ran sessions and (Claude Code) workflows. It needs a persona on the data: see [Personas](REFERENCE.md#personas).
+- **Conversations** (**Claude Code conversations**, **Grok Build conversations**): each session as a transcript. Click a conversation to see its prompts and replies, what the agent did, and every step; click a step to see what the tool returned and the file change it made. Text, commands and file contents appear only with the optional settings on: see [Conversations](REFERENCE.md#conversations).
 
 Beyond the dashboards:
 - **Drilldown → Logs / Metrics / Traces** in the left menu: browse every event, metric and trace without writing queries.
 - **Explore**: run your own queries. Examples are in [EXAMPLES.md](EXAMPLES.md#promql).
 
-To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on the server (`claude-code.json`, `grok-build.json`, and `*-work.json` / `*-flow.json` for the work logs and timelines); Grafana loads it within a minute. For a personal copy, open it from **Dashboards → Agent telemetry** and use **Save as copy**.
+To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on the server (`claude-code.json`, `grok-build.json`, and `*-work.json` / `*-flow.json` / `*-conversations.json` for the work logs, timelines and conversations); Grafana loads it within a minute. For a personal copy, open it from **Dashboards → Agent telemetry** and use **Save as copy**.
 
 ## Next
 
@@ -114,7 +115,8 @@ To change a dashboard, edit its file in `grafana/provisioning/dashboards/` on th
 | See Grok Build's cost, tokens and tools per VM and persona | The **Grok Build** dashboard: [View the data](#view-the-data) |
 | See what a session or prompt did: tool calls, commands, workflow runs | The **work log** dashboards: [Work logs and flow timelines](REFERENCE.md#work-logs-and-flow-timelines) |
 | See each persona's activity over time | The **flow timeline** dashboards: [Work logs and flow timelines](REFERENCE.md#work-logs-and-flow-timelines) |
-| Record commands and file paths, not just tool names | [Optional detail](REFERENCE.md#optional-detail-commands-and-file-paths) |
+| Read a session as a transcript: prompts, replies, tool output, diffs | The **conversations** dashboards: [Conversations](REFERENCE.md#conversations) |
+| Record commands, file paths and tool output, not just tool names | [Optional detail](REFERENCE.md#optional-detail-commands-and-file-paths) |
 | Write my own queries | [EXAMPLES.md](EXAMPLES.md) |
 | Stop or start the stack | `docker compose down` (keeps data) / `docker compose up -d --wait`, on the server |
 | Check the stack is healthy | [Health check](runbook.md#health-check) |

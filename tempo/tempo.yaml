@@ -22,6 +22,9 @@ distributor:
           endpoint: "0.0.0.0:4317"
         http:
           endpoint: "0.0.0.0:4318"
+  # The 2048 default cuts span and span-event attributes, including Claude Code's tool.output
+  # (file contents, Bash output, Edit diffs; OTEL_LOG_TOOL_CONTENT=1), which it caps at 60 KB.
+  max_attribute_bytes: 131072
 
 metrics_generator:
   registry:
@@ -67,6 +70,10 @@ backend_worker:
 
 overrides:
   defaults:
+    global:
+      # One trace = one Claude Code prompt. With tool content on, every Read/Edit/Bash adds up to
+      # 60 KB, so long prompts pass the 5 MB default and Tempo drops their later spans.
+      max_bytes_per_trace: 20000000
     metrics_generator:
       # 3.x: "local-blocks" was removed; TraceQL metrics / Traces Drilldown are
       # served natively by the live-store (recent data) + backend blocks.

@@ -89,8 +89,10 @@ datasources:
       search:
         hide: false
       traceQuery:
+        # Widens the trace-by-id search window: from - spanStartTimeShift, to + spanEndTimeShift.
+        # Both positive (unlike tracesToLogsV2, where the shift is added to the span's start).
         timeShiftEnabled: true
-        spanStartTimeShift: -30m
+        spanStartTimeShift: 30m
         spanEndTimeShift: 30m
       spanBar:
         type: Duration

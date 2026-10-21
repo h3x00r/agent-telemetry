@@ -39,6 +39,8 @@ A service not healthy or missing: `docker compose logs --tail 50 <svc>`, fix the
 | Grafana login fails after editing `.env` | The password only applies on first start | [Reset it](#reset-the-grafana-admin-password). |
 | Drilldown apps missing in Grafana | No internet on first start | Allow outbound HTTPS, then `docker compose restart grafana`. |
 | Work log **Shell commands**: `metrics query time range exceeds the maximum allowed duration of 24h0m0s` | Tempo still runs an older `tempo.yaml` | `docker compose restart tempo`. |
+| Conversations **Evidence** or a diff stops after 2 KB ("probably cut") | Tempo still runs an older `tempo.yaml` (2 KB attribute limit) | `docker compose restart tempo`. Values stored before stay cut. |
+| A trace link or panel says the trace isn't in the selected time range, for a prompt near the start of the range | Grafana still has an older Tempo datasource (the trace lookup window didn't reach back far enough) | `docker compose restart grafana`. |
 | Flow timeline has no persona rows | The data has no persona | See [Personas](REFERENCE.md#personas). |
 | A secret shows in Grafana (a command, path, tool input or prompt) | Masking doesn't know its format ([what it misses](REFERENCE.md#secret-masking)), or the collector wasn't restarted after the rules changed | Rotate the secret: masking never changes stored data, which stays until retention removes it. Then [add a pattern](#change-secret-masking). |
 | A value shows as `****` but isn't a secret | A masking rule matched it, e.g. `docker build --secret id=x` or `printf 'X_TOKEN=%s'` | [Narrow that rule](#change-secret-masking). The masked text can't be recovered. |

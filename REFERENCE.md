@@ -128,7 +128,7 @@ Loki index labels are `service_name`, `service_namespace`, `deployment_environme
 
 ## Work logs and flow timelines
 
-Besides its main dashboard, each agent has a **work log** (`claude-code-work.json`, `grok-build-work.json`) and a **flow timeline** (`claude-code-flow.json`, `grok-build-flow.json`).
+Besides its main dashboard, each agent has a **work log** (`claude-code-work.json`, `grok-build-work.json`), a **flow timeline** (`claude-code-flow.json`, `grok-build-flow.json`) and a **conversations** dashboard ([Conversations](#conversations)).
 
 - **Work log**: tables, top to bottom: **Sessions**; **Session work** (Claude Code: prompts, tool summary, shell commands, code edits, skills, subagents, compactions; Grok Build: turns, tool summary, file types); **Workflows** (Claude Code); **Tool calls**; **Session setup** (collapsed). Click a session id to set **Session** and narrow the time range to that session, a prompt id to set **Prompt**, a trace id to open the trace. Set **Prompt** back to `.*` to clear it; `.*` also matches events without a `prompt_id`.
 - Tables built from several queries (Sessions, Prompts, Turns, Workflows, Grok Build's Tool calls) are joined by a Grafana SQL expression over hidden queries; only Sessions mixes Prometheus and Loki. Each hidden query ends in a placeholder row (`or label_replace(vector(0), ...)`), because an empty input breaks the SQL, and the SQL drops it.
@@ -153,17 +153,17 @@ Both agents report which tool ran, not what it did. These agent-side settings ad
 | `OTEL_LOG_TOOL_DETAILS=1` | Claude Code | On tool events: `tool_parameters` (Bash command, MCP server and tool, skill and subagent names, commit id after `git commit`), `tool_input` (file paths, URLs, patterns), the full `error`; on tool spans: `full_command`, `file_path`, skill and subagent names; real skill names | Commands and paths, which can contain secrets |
 | `OTEL_METRICS_INCLUDE_REPOSITORY=true` | Claude Code | Repository URL, owner and name on metrics and events | Repository names |
 | `OTEL_LOG_TOOL_DETAILS=1` (or `[telemetry] otel_log_tool_details = true`) | Grok Build | Real tool, MCP and skill names, `file_path`, and a preview of `tool_parameters` (up to 4 KB) that includes shell commands | Commands and paths |
-| `OTEL_LOG_TOOL_CONTENT=1` | Both | Claude Code: tool output (file contents read, Bash and web results) on trace spans; Edit/Write content also needs `OTEL_LOG_TOOL_DETAILS`. Grok Build: tool input, output, the full command and failure error messages on events | File contents |
-| `OTEL_LOG_USER_PROMPTS=1` | Both | Prompt and response text | Everything typed |
+| `OTEL_LOG_TOOL_CONTENT=1` | Both | Claude Code: a `tool.output` event on its trace spans with what the tool returned: Read and Write content, the Edit patch, the Bash command and output, MCP and web results (Edit and Write also need `OTEL_LOG_TOOL_DETAILS`; tracing must be on). Grok Build: tool input, output, the full command and failure error messages on events | File contents, command output, fetched pages |
+| `OTEL_LOG_USER_PROMPTS=1` | Both | Prompt and response text (responses can be set on their own with `OTEL_LOG_ASSISTANT_RESPONSES`) | Everything typed |
 
-Set them with the other telemetry settings (Claude Code: the managed-settings `env` block; Grok Build: its environment), then restart the agent sessions. The collector masks common secret shapes in these fields before they are stored ([Secret masking](#secret-masking)). Loki rejects a record whose structured metadata exceeds 256KB, and the record is lost ([runbook](runbook.md#troubleshooting)).
+Set them with the other telemetry settings (Claude Code: the managed-settings `env` block; Grok Build: its environment), then restart the agent sessions. The collector masks common secret shapes in these fields before they are stored ([Secret masking](#secret-masking)). Loki rejects a record whose structured metadata exceeds 256KB, and the record is lost ([runbook](runbook.md#troubleshooting)). Claude Code sends each prompt twice (`prompt`, `prompt_text`) with no size cap, so the collector keeps one copy.
 
 With tool details on, the work logs show these columns. Most appear once some row in the time range carries their field, so with details off they are absent, not empty. Grok Build's **Tool calls** always shows **File** and **Parameters**, empty until details are on.
 - Claude Code **Tool calls**: **Command** (`full_command` from `tool_parameters`), **File** (`file_path` from `tool_input`) and **Input** (the raw `tool_input`: URLs, patterns, MCP arguments). Claude Code shortens long strings in `tool_input` and cuts it at about 4 KB. A cut value is not valid JSON, so **File** stays empty and **Input** shows the start.
-- Claude Code **Shell commands**: **Full command** (the span's `full_command`). Each distinct command line is then its own row, so one program's calls spread over several rows. Tempo keeps the first 2 KB of an attribute (its default `max_attribute_bytes`).
+- Claude Code **Shell commands**: **Full command** (the span's `full_command`). Each distinct command line is then its own row, so one program's calls spread over several rows. Tempo keeps the first 128 KB of an attribute (`distributor.max_attribute_bytes` in `tempo.yaml`; Tempo's default is 2 KB).
 - Grok Build **Tool calls** and **Failures**: **File** (`file_path`) and **Parameters** (the `tool_parameters` preview; in Tool calls from the tool result or else from its decision, in Failures from the failed tool result). Grok Build cuts the preview at 4 KB, so it may not be valid JSON.
 
-Long cells end in an ellipsis: hover one and click the eye icon for the full value. With details on, a full **Tool calls** table gets large (up to about 30 MB per refresh for 5000 Claude Code rows), so narrow the time range or pick a session. The other fields (`error`, the Bash `description`, the `OTEL_LOG_TOOL_CONTENT` bodies) are in Explore; [EXAMPLES.md](EXAMPLES.md#logql) has a query that lists Bash commands.
+Long cells end in an ellipsis: hover one and click the eye icon for the full value. With details on, a full **Tool calls** table gets large (up to about 30 MB per refresh for 5000 Claude Code rows), so narrow the time range or pick a session. The conversations dashboards show the `OTEL_LOG_TOOL_CONTENT` bodies ([Conversations](#conversations)); the other fields (`error`, the Bash `description`) are in Explore. [EXAMPLES.md](EXAMPLES.md#logql) has a query that lists Bash commands.
 
 #### Secret masking
 
@@ -180,6 +180,28 @@ The part that says what was there stays: `Bearer ****`, `GITHUB_TOKEN=****`, `gh
 It is best effort. These get through: a format it doesn't know, an unquoted value after `:` or a space (YAML `password: value`, `.netrc` `password value`), a short flag such as `-p` on a command not listed above, a secret split across values, a token cut short by Claude Code's shortening of long strings, a secret in a file path, string values nested in maps or lists, resource attributes and metrics. A few harmless values are masked too: `docker build --secret id=x,src=y` becomes `--secret ****,src=y`, and in code `self.token = token` becomes `self.token = ****`. Grok Build already scrubs secret shapes and home paths when it sends, and drops a record that still holds one, so this step mainly protects Claude Code's data, which isn't known to be scrubbed.
 
 To add or change a pattern, edit `transform/redact_secrets` in `otel-collector/config.yaml`. Each rule is in two lists: one for attributes (shared by logs, spans and span events) and one for log bodies. The comment above the processor explains the escaping. The collector reads its config only on start, so validate and run `docker compose restart otel-collector` on the server ([Change secret masking](runbook.md#change-secret-masking)). Masking applies to data received after that; data already stored stays until retention removes it.
+
+## Conversations
+
+Each agent has a **conversations** dashboard (`claude-code-conversations.json`, `grok-build-conversations.json`) that reads a session as a transcript, top to bottom:
+- **Conversations**: one row per session: title (the first logged prompt), start, last activity, VM, persona, user, talks (prompts), model calls, subagents, Bash runs (Grok Build: terminal runs), files changed, lines added and removed (Claude Code), tokens, cache-read share, cost, failed tools. Click a conversation to select it and narrow the time range to it.
+- **Talks**: one row per prompt: the prompt, the reply, and **What the agent did**, a collapsible list of its steps (Claude Code: the first 40 main-thread steps). Click a talk to narrow the panels below to it.
+- **Flow**: lanes for prompts, model calls, each tool and failures; Claude Code adds the talk's trace.
+- **Steps**: every tool call with its command and file. Click a step to inspect it.
+- **Inspector**: **Step details** (every field of the tool event), **Evidence** (what the tool returned) and the step's change.
+- **Changes**: every file edit in the conversation as a diff, newest first.
+
+| Part | Needs |
+|---|---|
+| Title, prompt and reply text | `OTEL_LOG_USER_PROMPTS=1` |
+| Commands, files, files changed, the parsed tool input | `OTEL_LOG_TOOL_DETAILS=1` |
+| Evidence and changes | `OTEL_LOG_TOOL_CONTENT=1`; Claude Code's Edit and Write also need tool details |
+
+With a setting off, its cells say "not logged" or show a short placeholder. Agent text only appears inside code blocks, and Grafana's HTML sanitizer stays on.
+
+- **Claude Code**: Evidence and changes come from the `tool.output` event on its Tempo tool spans. A Grafana SQL expression turns the Edit patch (hunks) into a unified diff; a Write shows as all-added lines. A diff cut short is closed after its last complete line and marked "cut". Claude Code caps each value at 60 KB. `tempo.yaml` raises Tempo's limits to 128 KB per attribute (`distributor.max_attribute_bytes`, default 2 KB) and 20 MB per trace (`max_bytes_per_trace`, default 5 MB), because one trace holds a whole prompt and every Read or Edit adds to it. After pulling: `docker compose restart tempo`.
+- **Grok Build**: everything comes from its Loki events. A change is rebuilt from the edit tool's input (`search_replace`, `edit`, `write`, `apply_patch`, `hashline_edit`); Grok Build reports no patch, and a step whose outcome isn't success wasn't applied. Without tool details it reports these tools as `custom_tool`, so their edits are missing. It cuts tool input and output at 60 KB.
+- **Limits**: each event table reads at most 5000 Loki events. Changes covers up to 100 prompts with 100 edits each (Claude Code) or 200 edits (Grok Build). Claude Code's subagent and teammate sessions send no prompts, so they have no talks. Grok Build doesn't send a subagent's parent session, so its subagents appear as separate conversations.
 
 ## Behaviour and limits
 

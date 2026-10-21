@@ -1,0 +1,2258 @@
+{
+  "uid": "grok-build-conversations",
+  "title": "Grok Build conversations",
+  "description": "Grok Build conversations as transcripts: pick a conversation, read its talks (prompt, response and the steps the agent took), follow its flow, and inspect any step: its input, output and the file change it made. Prompt and response text, commands, file paths, tool input and output fill only when the agents log them (OTEL_LOG_USER_PROMPTS, OTEL_LOG_TOOL_DETAILS, OTEL_LOG_TOOL_CONTENT); otherwise lengths, tool names and outcomes show.",
+  "tags": [
+    "grok-build",
+    "otel"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "version": 1,
+  "links": [
+    {
+      "title": "Agent telemetry",
+      "type": "dashboards",
+      "tags": [
+        "otel"
+      ],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "icon": "external link",
+      "targetBlank": false,
+      "tooltip": "",
+      "url": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "VM",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "host.name of the agent VM (from the X-Nexus-Host header)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total, host_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total, host_name)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "persona",
+        "label": "Persona",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "nexus persona (from the X-Nexus-Persona header)",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, persona)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\"}, persona)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "user",
+        "label": "User",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Grok account",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\"}, user_email)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\"}, user_email)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "session",
+        "label": "Conversation",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "description": "Grok Build conversation (session_id). All = none picked: only Conversations fills. Set by clicking a conversation.",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, session_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(grok_code_token_usage_total{host_name=~\"$host\", persona=~\"$persona\", user_email=~\"$user\"}, session_id)",
+        "refresh": 2,
+        "sort": 2,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0,
+        "allowCustomValue": true
+      },
+      {
+        "name": "prompt",
+        "label": "Talk",
+        "type": "textbox",
+        "description": "prompt_id of a talk; .* = every talk. Set by clicking a Talk id.",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "name": "tool",
+        "label": "Step",
+        "type": "textbox",
+        "description": "tool_use_id of the step shown in the Inspector; empty = none. Set by clicking a Tool in Steps or Changes.",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Conversations",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Conversations",
+      "description": "One row per Grok Build conversation (session) with events in the time range, newest first. Click a Conversation id to open it: that sets Conversation, clears Talk and Step, and narrows the time range to the conversation; the panels below then fill. Title = the first prompt in the range, only when the agent logs prompt text (OTEL_LOG_USER_PROMPTS); empty otherwise. Started / Last activity = first and last event in the range; Span = the time between them. Talks = prompts; Turns = finished turns; Model calls = API responses; Subagents launched = subagent start events (the task tool); Terminal runs = shell tool results; Files touched = distinct file paths, \"-\" unless tool details are on; Failed tools = tool results whose outcome is not success. Tokens = input + output (Grok counts cache reads inside input and reasoning inside output); Cache read % = cache read / input; Cost = what Grok reports (\"-\" for headless runs, which send none). Everything comes from Loki events. A subagent runs as its own conversation, but Grok does not send its parent, so child conversations are listed like any other and are not marked. (none) = data without nexus headers. Honours VM, Persona and User; ignores Conversation, Talk and Step so you can switch. Loki returns at most 1000 series per query, so a range with more conversations errors: narrow the time range.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id, host_name, persona, user_email) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])) or label_replace(label_replace(label_replace(label_replace(vector(0), \"session_id\", \"-\", \"\", \"\"), \"host_name\", \"-\", \"\", \"\"), \"persona\", \"-\", \"\", \"\"), \"user_email\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "LS",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "min by (session_id) (min_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap observed_timestamp | __error__=\"\" [$__range])) / 1e6 or label_replace(vector(0), \"session_id\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "LE",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "max by (session_id) (max_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap observed_timestamp | __error__=\"\" [$__range])) / 1e6 or label_replace(vector(0), \"session_id\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | prompt_length!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"talks\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_call_count!=\"\" | duration_ms!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"turns\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"calls\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | phase=\"launched\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"subs\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | tool_name=~\"run_terminal_cmd|run_terminal_command|bash\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"term\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | outcome!=\"success\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"failed\", \"\", \"\") or label_replace(sum by (session_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_parameters!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"det\", \"\", \"\") or label_replace(count by (session_id) (sum by (session_id, file_path) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | file_path!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range]))), \"k\", \"files\", \"\", \"\") or label_replace(sum by (session_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap input_tokens | __error__=\"\" [$__range])), \"k\", \"in\", \"\", \"\") or label_replace(sum by (session_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap output_tokens | __error__=\"\" [$__range])), \"k\", \"out\", \"\", \"\") or label_replace(sum by (session_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap cache_read_tokens | __error__=\"\" [$__range])), \"k\", \"cr\", \"\", \"\") or label_replace(sum by (session_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | cost_usd_micros!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap cost_usd_micros | __error__=\"\" [$__range])), \"k\", \"cost\", \"\", \"\") or label_replace(label_replace(vector(0), \"session_id\", \"-\", \"\", \"\"), \"k\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "T",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "bottomk by (session_id) (1, min by (session_id, title) (min_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | prompt!=\"\" | session_id!=\"\" | persona=~\"$persona\" | user_email=~\"$user\" | label_format title=`{{ (regexReplaceAll \"(?s)^(.{0,100}).*\" (regexReplaceAll \"\\\\s+\" .prompt \" \") \"${1}\") }}` | unwrap observed_timestamp | __error__=\"\" [$__range]))) or label_replace(label_replace(vector(0), \"session_id\", \"-\", \"\", \"\"), \"title\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT\n  SUBSTRING(ids.session_id, 1, 8) AS `Conversation`,\n  COALESCE(t.title, '') AS `Title`,\n  CAST(FROM_UNIXTIME(FLOOR(st.__value__ / 1000)) AS DATETIME) AS `Started`,\n  CAST(FROM_UNIXTIME(FLOOR(en.__value__ / 1000)) AS DATETIME) AS `Last activity`,\n  (en.__value__ - st.__value__) / 1000 AS `Span`,\n  COALESCE(NULLIF(a.host_name, ''), '(none)') AS `VM`,\n  COALESCE(NULLIF(a.persona, ''), '(none)') AS `Persona`,\n  COALESCE(NULLIF(a.user_email, ''), '(none)') AS `User`,\n  COALESCE(n.talks, 0) AS `Talks`,\n  COALESCE(n.turns, 0) AS `Turns`,\n  COALESCE(n.calls, 0) AS `Model calls`,\n  COALESCE(n.subs, 0) AS `Subagents launched`,\n  COALESCE(n.term, 0) AS `Terminal runs`,\n  CASE WHEN COALESCE(n.det, 0) > 0 THEN COALESCE(n.files, 0) END AS `Files touched`,\n  COALESCE(n.in_t, 0) + COALESCE(n.out_t, 0) AS `Tokens`,\n  CASE WHEN COALESCE(n.in_t, 0) > 0 THEN 100 * COALESCE(n.cr, 0) / n.in_t END AS `Cache read %`,\n  CASE WHEN COALESCE(n.cost, 0) > 0 THEN n.cost / 1000000 END AS `Cost`,\n  COALESCE(n.failed, 0) AS `Failed tools`,\n  CAST(FLOOR(st.__value__) - 60000 AS SIGNED) AS `start_ms`,\n  CAST(FLOOR(en.__value__) + 60000 AS SIGNED) AS `end_ms`,\n  ids.session_id AS `session_id`\nFROM (SELECT session_id FROM I UNION SELECT session_id FROM LS) ids\nLEFT JOIN (SELECT session_id, MAX(host_name) AS host_name, MAX(persona) AS persona, MAX(user_email) AS user_email\n           FROM I GROUP BY session_id) a ON a.session_id = ids.session_id\nLEFT JOIN LS st ON st.session_id = ids.session_id\nLEFT JOIN LE en ON en.session_id = ids.session_id\nLEFT JOIN (SELECT session_id, MAX(title) AS title FROM T WHERE session_id <> '-' GROUP BY session_id) t ON t.session_id = ids.session_id\nLEFT JOIN (SELECT session_id,\n                  SUM(CASE WHEN k = 'talks' THEN __value__ ELSE 0 END) AS talks, SUM(CASE WHEN k = 'turns' THEN __value__ ELSE 0 END) AS turns, SUM(CASE WHEN k = 'calls' THEN __value__ ELSE 0 END) AS calls, SUM(CASE WHEN k = 'subs' THEN __value__ ELSE 0 END) AS subs,\n                  SUM(CASE WHEN k = 'term' THEN __value__ ELSE 0 END) AS term, SUM(CASE WHEN k = 'failed' THEN __value__ ELSE 0 END) AS failed, SUM(CASE WHEN k = 'det' THEN __value__ ELSE 0 END) AS det, SUM(CASE WHEN k = 'files' THEN __value__ ELSE 0 END) AS files,\n                  SUM(CASE WHEN k = 'in' THEN __value__ ELSE 0 END) AS in_t,\n                  SUM(CASE WHEN k = 'out' THEN __value__ ELSE 0 END) AS out_t,\n                  SUM(CASE WHEN k = 'cr' THEN __value__ ELSE 0 END) AS cr, SUM(CASE WHEN k = 'cost' THEN __value__ ELSE 0 END) AS cost\n           FROM N GROUP BY session_id) n ON n.session_id = ids.session_id\nWHERE ids.session_id <> '-'\nORDER BY `Started` DESC"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Conversation"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this conversation (sets Conversation and narrows the time range to it)",
+                    "url": "/d/${__dashboard.uid}?from=${__data.fields.start_ms}&to=${__data.fields.end_ms}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&var-session=${__data.fields.session_id}&var-prompt=.*&var-tool="
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 280
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Started"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last activity"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Span"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Talks"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turns"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model calls"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Subagents launched"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Terminal runs"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Files touched"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "noValue",
+                "value": "-"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "fieldMinMax",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cache read %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "noValue",
+                "value": "-"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "fieldMinMax",
+                "value": true
+              },
+              {
+                "id": "noValue",
+                "value": "-"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed tools"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "start_ms"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "end_ms"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": [
+            "Talks",
+            "Turns",
+            "Model calls",
+            "Subagents launched",
+            "Terminal runs",
+            "Tokens",
+            "Cost",
+            "Failed tools"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "Talks",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "panels": []
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Talks",
+      "description": "The selected conversation, one row per talk (a prompt and the turn that answered it), oldest first. Prompt = the prompt text in a code block when the agent logs prompts (OTEL_LOG_USER_PROMPTS), else \"not logged\" and its length. Response = the turn's reply text when responses are logged (OTEL_LOG_ASSISTANT_RESPONSES, which follows OTEL_LOG_USER_PROMPTS when unset), else its length; long texts show their first 4000 characters. What the agent did = the turn's tool calls (count, turn outcome, turn duration); open it for the steps in order: outcome, tool, duration and the command, file or parameter preview, which need tool details (OTEL_LOG_TOOL_DETAILS) or tool content (OTEL_LOG_TOOL_CONTENT); without them only the tool names show. Model calls, Tokens (input + output) and Cost are summed over the turn's API responses. Click a Talk id to focus Flow, Steps and Changes on it. Empty until a conversation is picked. Honours VM, Persona, User and Conversation; ignores Talk so you can switch.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "targets": [
+        {
+          "refId": "P",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | prompt_length!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | line_format `{{ if .prompt }}{{ $t := (regexReplaceAll \"\\\\x{FFFD}+$\" (trunc 4096 .prompt) \"\") }}~~~~~~~~~~text\n{{ (Replace (Replace $t \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ if ne $t .prompt }}\n\n*Cut after 4 KB; the full prompt has {{ .prompt_length }} characters.*{{ end }}{{ else if eq .prompt_length \"0\" }}*no text (tools only)*{{ else }}*not logged \u00b7 {{ .prompt_length }} chars*{{ end }}` | drop prompt",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 1000,
+          "hide": true
+        },
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | response_length!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | line_format `{{ if .response }}{{ $t := (regexReplaceAll \"\\\\x{FFFD}+$\" (trunc 4096 .response) \"\") }}~~~~~~~~~~text\n{{ (Replace (Replace $t \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ if ne $t .response }}\n\n*Cut after 4 KB; the full response has {{ .response_length }} characters.*{{ end }}{{ else if eq .response_length \"0\" }}*no text (tools only)*{{ else }}*not logged \u00b7 {{ .response_length }} chars*{{ end }}` | drop response",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 1000,
+          "hide": true
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_call_count!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\"",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 1000,
+          "hide": true
+        },
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | drop tool_input, tool_output, error_message | label_format step_item=`{{ $s := \"other\" }}{{ if eq .outcome \"success\" }}{{ $s = \"ok\" }}{{ else if eq .outcome \"error\" }}{{ $s = \"error\" }}{{ else if or (eq .outcome \"permission_rejected\") (eq .outcome \"hook_denied\") }}{{ $s = \"denied\" }}{{ else if or (eq .outcome \"permission_cancelled\") (eq .outcome \"cancelled\") }}{{ $s = \"cancelled\" }}{{ else if eq .outcome \"invalid_tool\" }}{{ $s = \"invalid\" }}{{ else if eq .outcome \"followup\" }}{{ $s = \"followup\" }}{{ end }}{{ $d := \"\" }}{{ if .duration_ms }}{{ if lt (int .duration_ms) 1000 }}{{ $d = printf \"%s ms\" .duration_ms }}{{ else if lt (int .duration_ms) 60000 }}{{ $d = printf \"%.1f s\" (divf .duration_ms 1000) }}{{ else }}{{ $d = printf \"%.1f min\" (divf .duration_ms 60000) }}{{ end }}{{ end }}{{ $x := .full_command }}{{ if not $x }}{{ $x = .file_path }}{{ end }}{{ if not $x }}{{ $x = .tool_parameters }}{{ end }}{{ printf \"%-9s %-24s %-9s \" $s (regexReplaceAll \"(?s)^(.{0,28}).*\" .tool_name \"${1}\") $d }}{{ (regexReplaceAll \"(?s)^(.{0,90}).*\" (Replace (Replace $x \"\\r\" \"\" -1) \"\\n\" \" \u23ce \" -1) \"${1}\") }}`",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 5000,
+          "hide": true
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "label_replace(sum by (prompt_id) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" [$__range])), \"k\", \"calls\", \"\", \"\") or label_replace(sum by (prompt_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap input_tokens | __error__=\"\" [$__range])), \"k\", \"in\", \"\", \"\") or label_replace(sum by (prompt_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap output_tokens | __error__=\"\" [$__range])), \"k\", \"out\", \"\", \"\") or label_replace(sum by (prompt_id) (sum_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | cost_usd_micros!=\"\" | session_id=\"$session\" | persona=~\"$persona\" | user_email=~\"$user\" | unwrap cost_usd_micros | __error__=\"\" [$__range])), \"k\", \"cost\", \"\", \"\") or label_replace(label_replace(vector(0), \"prompt_id\", \"-\", \"\", \"\"), \"k\", \"-\", \"\", \"\")",
+          "editorMode": "code",
+          "queryType": "instant",
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT q.`Time`, q.`Turn`, q.`Prompt`, q.`Response`, q.`What the agent did`, q.`Model calls`, q.`Tokens`, q.`Cost`, q.`Talk`, q.`prompt_id`, q.`session_id`\nFROM (\nSELECT NULL AS `Time`, NULL AS `Turn`, 'Pick a conversation: click its id in Conversations (or widen the time range).' AS `Prompt`, '' AS `Response`, '' AS `What the agent did`, NULL AS `Model calls`,\n       NULL AS `Tokens`, NULL AS `Cost`, '' AS `Talk`, '' AS `prompt_id`, '' AS `session_id`, 0 AS o\nFROM (SELECT COUNT(*) AS n FROM P) c WHERE c.n = 0\nUNION ALL\nSELECT\n  p.Time AS `Time`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.turn_number')) AS SIGNED) AS `Turn`,\n  CASE WHEN LEFT(p.Line, 1) IN ('~', '*') THEN p.Line ELSE '*could not render*' END AS `Prompt`,\n  COALESCE(a.md, '*no response yet*') AS `Response`,\n  CASE WHEN COALESCE(e.tool_call_count, s.n, 0) = 0 THEN CONCAT(CAST(COALESCE(e.tool_call_count, s.n, 0) AS CHAR), CASE WHEN COALESCE(e.tool_call_count, s.n, 0) = 1 THEN ' tool call' ELSE ' tool calls' END, ' \u00b7 ', CASE WHEN e.outcome IS NULL THEN 'running' ELSE (CASE e.outcome WHEN 'completed' THEN 'completed' WHEN 'cancelled' THEN 'cancelled' WHEN 'error' THEN 'error' ELSE 'other' END) END, CASE WHEN e.duration_ms IS NULL THEN '' ELSE CONCAT(' \u00b7 ', (CASE WHEN e.duration_ms IS NULL THEN NULL WHEN e.duration_ms < 1000 THEN CONCAT(CAST(e.duration_ms AS CHAR), ' ms') WHEN e.duration_ms < 60000 THEN CONCAT(CAST(ROUND(e.duration_ms / 1000, 1) AS CHAR), ' s') ELSE CONCAT(CAST(ROUND(e.duration_ms / 60000, 1) AS CHAR), ' min') END)) END) WHEN s.n IS NULL THEN CONCAT(CONCAT(CAST(COALESCE(e.tool_call_count, s.n, 0) AS CHAR), CASE WHEN COALESCE(e.tool_call_count, s.n, 0) = 1 THEN ' tool call' ELSE ' tool calls' END, ' \u00b7 ', CASE WHEN e.outcome IS NULL THEN 'running' ELSE (CASE e.outcome WHEN 'completed' THEN 'completed' WHEN 'cancelled' THEN 'cancelled' WHEN 'error' THEN 'error' ELSE 'other' END) END, CASE WHEN e.duration_ms IS NULL THEN '' ELSE CONCAT(' \u00b7 ', (CASE WHEN e.duration_ms IS NULL THEN NULL WHEN e.duration_ms < 1000 THEN CONCAT(CAST(e.duration_ms AS CHAR), ' ms') WHEN e.duration_ms < 60000 THEN CONCAT(CAST(ROUND(e.duration_ms / 1000, 1) AS CHAR), ' s') ELSE CONCAT(CAST(ROUND(e.duration_ms / 60000, 1) AS CHAR), ' min') END)) END), ' \u00b7 tool results not in the time range') ELSE CONCAT('<details><summary>', CONCAT(CAST(COALESCE(e.tool_call_count, s.n, 0) AS CHAR), CASE WHEN COALESCE(e.tool_call_count, s.n, 0) = 1 THEN ' tool call' ELSE ' tool calls' END, ' \u00b7 ', CASE WHEN e.outcome IS NULL THEN 'running' ELSE (CASE e.outcome WHEN 'completed' THEN 'completed' WHEN 'cancelled' THEN 'cancelled' WHEN 'error' THEN 'error' ELSE 'other' END) END, CASE WHEN e.duration_ms IS NULL THEN '' ELSE CONCAT(' \u00b7 ', (CASE WHEN e.duration_ms IS NULL THEN NULL WHEN e.duration_ms < 1000 THEN CONCAT(CAST(e.duration_ms AS CHAR), ' ms') WHEN e.duration_ms < 60000 THEN CONCAT(CAST(ROUND(e.duration_ms / 1000, 1) AS CHAR), ' s') ELSE CONCAT(CAST(ROUND(e.duration_ms / 60000, 1) AS CHAR), ' min') END)) END), '</summary>\\n\\n', CONCAT('~~~~~~~~~~text\\n', REPLACE(REPLACE(CONCAT(s.steps, CASE WHEN s.n > s.shown THEN CONCAT('\u2026 ', CAST(s.n - s.shown AS CHAR), ' more: see Steps') ELSE '' END), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~'), '\\n\\n</details>') END AS `What the agent did`,\n  COALESCE(k.calls, 0) AS `Model calls`,\n  COALESCE(k.in_t, 0) + COALESCE(k.out_t, 0) AS `Tokens`,\n  CASE WHEN COALESCE(k.cost, 0) > 0 THEN k.cost / 1000000 END AS `Cost`,\n  SUBSTRING(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id')), ''), 1, 8) AS `Talk`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id')), '') AS `prompt_id`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.session_id')), '') AS `session_id`,\n  CAST(p.tsNs AS SIGNED) AS o\nFROM P p\nLEFT JOIN (SELECT JSON_UNQUOTE(JSON_EXTRACT(a0.labels, '$.prompt_id')) AS prompt_id, MAX(CASE WHEN LEFT(a0.Line, 1) IN ('~', '*') THEN a0.Line ELSE '*could not render*' END) AS md\n           FROM A a0 GROUP BY JSON_UNQUOTE(JSON_EXTRACT(a0.labels, '$.prompt_id'))) a ON a.prompt_id = JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id'))\nLEFT JOIN (SELECT JSON_UNQUOTE(JSON_EXTRACT(e0.labels, '$.prompt_id')) AS prompt_id, MAX(JSON_UNQUOTE(JSON_EXTRACT(e0.labels, '$.outcome'))) AS outcome,\n                  MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(e0.labels, '$.tool_call_count')) AS SIGNED)) AS tool_call_count,\n                  MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(e0.labels, '$.duration_ms')) AS SIGNED)) AS duration_ms\n           FROM E e0 GROUP BY JSON_UNQUOTE(JSON_EXTRACT(e0.labels, '$.prompt_id'))) e ON e.prompt_id = JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id'))\nLEFT JOIN (SELECT prompt_id,\n                  SUM(CASE WHEN k = 'calls' THEN __value__ ELSE 0 END) AS calls,\n                  SUM(CASE WHEN k = 'in' THEN __value__ ELSE 0 END) AS in_t,\n                  SUM(CASE WHEN k = 'out' THEN __value__ ELSE 0 END) AS out_t,\n                  SUM(CASE WHEN k = 'cost' THEN __value__ ELSE 0 END) AS cost\n           FROM K GROUP BY prompt_id) k ON k.prompt_id = JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id'))\nLEFT JOIN (SELECT z.prompt_id, SUM(z.n) AS n, SUM(CASE WHEN z.b < 24 THEN z.n ELSE 0 END) AS shown, CONCAT(COALESCE(MAX(CASE WHEN z.b = 0 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 1 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 2 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 3 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 4 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 5 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 6 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 7 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 8 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 9 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 10 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 11 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 12 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 13 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 14 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 15 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 16 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 17 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 18 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 19 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 20 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 21 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 22 THEN CONCAT(z.txt, '\\n') END), ''), COALESCE(MAX(CASE WHEN z.b = 23 THEN CONCAT(z.txt, '\\n') END), '')) AS steps FROM (SELECT y.prompt_id, y.b, COUNT(*) AS n, GROUP_CONCAT(y.item ORDER BY y.ord SEPARATOR '\\n') AS txt FROM (SELECT x.prompt_id, x.item, x.ord, FLOOR(SUM(LENGTH(x.item) + 1) OVER (PARTITION BY x.prompt_id ORDER BY x.ord) / 500) AS b FROM (SELECT JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')) AS prompt_id, CAST(r.tsNs AS SIGNED) AS ord, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.step_item')), '') AS item FROM R r) x) y GROUP BY y.prompt_id, y.b) z GROUP BY z.prompt_id) s ON s.prompt_id = JSON_UNQUOTE(JSON_EXTRACT(p.labels, '$.prompt_id'))\n) q\nORDER BY q.o"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turn"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 50
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompt"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Response"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "What the agent did"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 380
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model calls"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 65
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              },
+              {
+                "id": "noValue",
+                "value": "-"
+              },
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Talk"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 85
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus this talk (sets Talk: Flow, Steps and Changes show only it; set Talk back to .* to clear)",
+                    "url": "/d/${__dashboard.uid}?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&var-session=${__data.fields.session_id}&var-prompt=${__data.fields.prompt_id}&var-tool="
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": [
+            "Model calls",
+            "Tokens",
+            "Cost"
+          ]
+        },
+        "enablePagination": true,
+        "maxRowHeight": 360
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Flow",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "state-timeline",
+      "title": "Flow",
+      "description": "What the selected conversation did over time, one lane per kind of event (hover for the event count in the bucket): Prompts = a prompt came in; Model calls = a model call finished; Tool: <name> = results of that tool; Failed tools = tool results whose outcome is not success; Subagents = a subagent was launched. Buckets are $__auto wide (opening a conversation narrows the time range to it, so buckets are short); a box means at least one event in that bucket, not how long the work took. Lanes with no event are not drawn. Empty until a conversation is picked. Honours VM, Persona, User, Conversation and Talk.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Prompts",
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | prompt_length!=\"\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" [$__auto] offset -$__auto))"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Model calls",
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | stop_reason!=\"\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" [$__auto] offset -$__auto))"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Tool: {{tool_name}}",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" [$__auto] offset -$__auto))"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Failed tools",
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | outcome!=\"success\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" [$__auto] offset -$__auto))"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "Subagents",
+          "expr": "sum (count_over_time({service_name=\"grok-cli\", host_name=~\"$host\"} | phase=\"launched\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" [$__auto] offset -$__auto))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0,
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prompts"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "purple",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model calls"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "blue",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^Tool: .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Failed tools"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Subagents"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "transparent",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Steps",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Steps",
+      "description": "Every tool call of the selected conversation (and Talk, if set), in order (# = position in this list). Click a Tool to inspect that step below. Command = the full command (tool content: OTEL_LOG_TOOL_CONTENT), else the command in the parameter preview (tool details: OTEL_LOG_TOOL_DETAILS); File = the file path (tool details), else the path in the preview; Parameters = the preview of the call arguments (tool details; Grok cuts it at 4 KB and shortens long strings, so it may not be valid JSON). With both off only Tool, Outcome and Duration fill. Decision = the matching permission decision (allow / deny / ask). Grok scrubs secrets and home paths before sending, and the collector masks common secret shapes. Hover a long cell and click the eye icon for the full value. Shows the newest 5000 tool calls. Empty until a conversation is picked. Honours VM, Persona, User, Conversation and Talk.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "targets": [
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" | drop tool_input, tool_output, error_message",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 5000,
+          "hide": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | decision!=\"\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" | drop tool_input, tool_output, error_message",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 5000,
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT q.`Time`, q.`#`, q.`Turn`, q.`Tool`, q.`Command`, q.`File`, q.`Outcome`, q.`Duration`, q.`Decision`, q.`Parameters`, q.`Talk`,\n       q.`tool_use_id`, q.`prompt_id`, q.`session_id`\nFROM (\nSELECT NULL AS `Time`, NULL AS `#`, NULL AS `Turn`, 'Pick a conversation: click its id in Conversations (or widen the time range).' AS `Tool`, '' AS `Command`, '' AS `File`, '' AS `Outcome`, NULL AS `Duration`,\n       '' AS `Decision`, '' AS `Parameters`, '' AS `Talk`, '' AS `tool_use_id`, '' AS `prompt_id`, '' AS `session_id`, 0 AS o\nFROM (SELECT COUNT(*) AS n FROM R) c WHERE c.n = 0\nUNION ALL\nSELECT\n  r.Time AS `Time`,\n  ROW_NUMBER() OVER (ORDER BY CAST(r.tsNs AS SIGNED)) AS `#`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.turn_number')) AS SIGNED) AS `Turn`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_name')), '') AS `Tool`,\n  COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.full_command')), ''), NULLIF(d.full_command, ''), (CASE WHEN JSON_VALID(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters)) THEN JSON_UNQUOTE(JSON_EXTRACT(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters), '$.command')) END), '') AS `Command`,\n  COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_path')), ''), (CASE WHEN JSON_VALID(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters)) THEN JSON_UNQUOTE(JSON_EXTRACT(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters), '$.file_path')) END), (CASE WHEN JSON_VALID(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters)) THEN JSON_UNQUOTE(JSON_EXTRACT(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters), '$.filePath')) END), (CASE WHEN JSON_VALID(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters)) THEN JSON_UNQUOTE(JSON_EXTRACT(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters), '$.path')) END), '') AS `File`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')), '') AS `Outcome`,\n  CAST(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.duration_ms')) AS SIGNED) AS `Duration`,\n  COALESCE(d.decision, '') AS `Decision`,\n  COALESCE(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), d.tool_parameters), '') AS `Parameters`,\n  SUBSTRING(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')), ''), 1, 8) AS `Talk`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id')), '') AS `tool_use_id`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')), '') AS `prompt_id`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.session_id')), '') AS `session_id`,\n  CAST(r.tsNs AS SIGNED) AS o\nFROM R r\nLEFT JOIN (SELECT dd.tool_use_id, MAX(dd.decision) AS decision, MAX(dd.tool_parameters) AS tool_parameters, MAX(dd.full_command) AS full_command\n           FROM (SELECT JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.tool_use_id')) AS tool_use_id, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.decision')) AS decision,\n                        JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.tool_parameters')) AS tool_parameters, JSON_UNQUOTE(JSON_EXTRACT(D.labels, '$.full_command')) AS full_command FROM D) dd\n           GROUP BY dd.tool_use_id) d ON d.tool_use_id = JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id'))\n) q\nORDER BY q.o"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "#"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 45
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Turn"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 50
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tool"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect this step (sets Step: the Inspector shows its details, input, output and change)",
+                    "url": "/d/${__dashboard.uid}?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&var-session=${__data.fields.session_id}&${prompt:queryparam}&var-tool=${__data.fields.tool_use_id}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Command"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 220
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "text": "success",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "error": {
+                        "text": "error",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "completed": {
+                        "text": "completed",
+                        "color": "green",
+                        "index": 2
+                      },
+                      "cancelled": {
+                        "text": "cancelled",
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "permission_rejected": {
+                        "text": "denied",
+                        "color": "red",
+                        "index": 4
+                      },
+                      "hook_denied": {
+                        "text": "hook denied",
+                        "color": "red",
+                        "index": 5
+                      },
+                      "permission_cancelled": {
+                        "text": "cancelled",
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "invalid_tool": {
+                        "text": "invalid tool",
+                        "color": "red",
+                        "index": 7
+                      },
+                      "followup": {
+                        "text": "follow-up",
+                        "color": "orange",
+                        "index": 8
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "noValue",
+                "value": "-"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Decision"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "allow": {
+                        "text": "allow",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "deny": {
+                        "text": "deny",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "ask": {
+                        "text": "ask",
+                        "color": "orange",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Decision"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Parameters"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Talk"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 85
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Focus this talk (sets Talk; set Talk back to .* to clear)",
+                    "url": "/d/${__dashboard.uid}?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&var-session=${__data.fields.session_id}&var-prompt=${__data.fields.prompt_id}&var-tool="
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_use_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": [
+            "Duration"
+          ]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Inspector",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "panels": [],
+      "description": "The step picked in Steps (Step variable)."
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Step details",
+      "description": "The fields of the selected step: its tool result and its permission decision, one per row (empty fields are left out). File, Parameters, MCP names and verbatim tool names need tool details (OTEL_LOG_TOOL_DETAILS); Command needs tool content (OTEL_LOG_TOOL_CONTENT). Shows \"pick a step\" until a Tool is clicked in Steps. Honours Conversation and Step.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 8,
+        "x": 0,
+        "y": 50
+      },
+      "targets": [
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\" | drop tool_input, tool_output, error_message",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | decision!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\" | drop tool_input, tool_output, error_message",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT f.`Field`, COALESCE(f.`Detail`, '') AS `Detail`\nFROM (\nSELECT -1 AS o, 'Step' AS `Field`, 'Pick a step: click a Tool in Steps.' AS `Detail` FROM (SELECT COUNT(*) AS n FROM R) c1, (SELECT COUNT(*) AS n FROM D) c2 WHERE c1.n + c2.n = 0\nUNION ALL\nSELECT 0 AS o, 'Tool' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_name')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_name'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 1 AS o, 'Time (UTC)' AS `Field`, CAST(FROM_UNIXTIME(FLOOR(CAST(COALESCE(r.tsNs, d.tsNs) AS SIGNED) / 1000000000)) AS CHAR) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 2 AS o, 'Talk' AS `Field`, SUBSTRING(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.prompt_id')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.prompt_id'))), 1, 8) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 3 AS o, 'Turn' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.turn_number')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.turn_number'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 4 AS o, 'Outcome' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 5 AS o, 'Success' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.success')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 6 AS o, 'Duration' AS `Field`, CONCAT(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.duration_ms')), ' ms') AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 7 AS o, 'File' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_path')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 8 AS o, 'File type' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.file_extension')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 9 AS o, 'Command' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.full_command')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.full_command'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 10 AS o, 'Parameters' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_parameters')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_parameters'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 11 AS o, 'MCP server' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.mcp_server_name')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.mcp_server_name'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 12 AS o, 'MCP tool' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.mcp_tool_name')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.mcp_tool_name'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 13 AS o, 'Hook rewrote' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.hook_rewrote')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 14 AS o, 'Model' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.model')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 15 AS o, 'Decision' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.decision')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 16 AS o, 'Access' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.access_kind')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 17 AS o, 'Permission mode' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.permission_mode')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 18 AS o, 'Decision source' AS `Field`, JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.source')) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 19 AS o, 'Call id' AS `Field`, COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_use_id'))) AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 20 AS o, 'Result' AS `Field`, CASE WHEN r.labels IS NULL THEN 'no tool-result event in the time range (still running, or outside the range)' END AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 21 AS o, 'Decision event' AS `Field`, CASE WHEN d.labels IS NULL THEN 'none in the time range' END AS `Detail` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\n) f\nWHERE f.`Detail` IS NOT NULL AND f.`Detail` <> ''\nORDER BY f.o"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Field"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Detail"
+            },
+            "properties": [
+              {
+                "id": "custom.inspect",
+                "value": true
+              },
+              {
+                "id": "custom.wrapText",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": []
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Step evidence",
+      "description": "What the selected step got and returned: Input = the call arguments as JSON, Command = the full shell command, Output = what the tool returned (for shell commands \"exit: <code>\" then the output), Error = the failure message of a failed step, Subagent = the subagent id a task call reports. All need tool content (OTEL_LOG_TOOL_CONTENT); Grok caps each at 60 KB (the error message at 4 KB) and scrubs secrets and home paths, and the collector masks common secret shapes. Shows \"pick a step\" until a Tool is clicked in Steps. Honours Conversation and Step.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 16,
+        "x": 8,
+        "y": 50
+      },
+      "targets": [
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\"",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | decision!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\" | drop tool_output",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT f.`Part`, COALESCE(f.`Content`, '') AS `Content`\nFROM (\nSELECT -1 AS o, 'Step' AS `Part`, 'Pick a step: click a Tool in Steps.' AS `Content` FROM (SELECT COUNT(*) AS n FROM R) c1, (SELECT COUNT(*) AS n FROM D) c2 WHERE c1.n + c2.n = 0\nUNION ALL\nSELECT 0 AS o, 'Input' AS `Part`, CASE WHEN COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_input')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_input'))) IS NULL THEN '*not logged: needs tool content*' WHEN JSON_VALID(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_input')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_input')))) THEN CONCAT('~~~~~~~~~~json\\n', REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(JSON_PRETTY(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_input')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_input')))), '\\\\u003c', '<'), '\\\\u003e', '>'), '\\\\u0026', '&'), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~') ELSE CONCAT('*cut at 60 KB by Grok (not valid JSON):*\\n\\n', CONCAT('~~~~~~~~~~text\\n', REPLACE(REPLACE(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_input')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_input'))), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~')) END AS `Content` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 1 AS o, 'Command' AS `Part`, CASE WHEN COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.full_command')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.full_command'))) IS NOT NULL THEN CONCAT('~~~~~~~~~~sh\\n', REPLACE(REPLACE(COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.full_command')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.full_command'))), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~') END AS `Content` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 2 AS o, 'Output' AS `Part`, CASE WHEN r.labels IS NULL THEN '*no tool result yet*' WHEN JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_output')) IS NOT NULL THEN CONCAT('~~~~~~~~~~text\\n', REPLACE(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_output')), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~') WHEN (COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_input')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.tool_input'))) IS NOT NULL OR JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_output')) IS NOT NULL OR COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.full_command')), ''), JSON_UNQUOTE(JSON_EXTRACT(d.labels, '$.full_command'))) IS NOT NULL) THEN '*no output*' ELSE '*not logged: needs tool content*' END AS `Content` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 3 AS o, 'Error' AS `Part`, CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.error_message')) IS NOT NULL AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')), '') <> 'success' THEN CONCAT('~~~~~~~~~~text\\n', REPLACE(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.error_message')), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~') END AS `Content` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\nUNION ALL\nSELECT 4 AS o, 'Subagent' AS `Part`, CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_output')) LIKE '%subagent_id:%' THEN CONCAT('~~~~~~~~~~text\\n', REPLACE(REPLACE(REGEXP_SUBSTR(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_output')), 'subagent_id: [^[:space:]]+'), '\\r', ''), '~~', '~\u200b~'), '\\n~~~~~~~~~~') END AS `Content` FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs FROM D LIMIT 1) d ON 1 = 1 WHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\n) f\nWHERE f.`Content` IS NOT NULL AND f.`Content` <> ''\nORDER BY f.o"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Part"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Content"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": []
+        },
+        "maxRowHeight": 600
+      }
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Step change",
+      "description": "The file change the selected step made, if it is a file-editing tool (search_replace, write, edit, hashline_edit, apply_patch, edit_notebook, delete_file). It is rebuilt from the tool input, not a patch reported by Grok: search_replace / edit show the replaced text as - lines and the new text as + lines (--- /dev/null = a new file); write shows the whole content as + lines; apply_patch shows the patch as sent; other edit tools show their input. A step that did not succeed was not applied. Needs tool content (OTEL_LOG_TOOL_CONTENT); the file path alone needs tool details. Grok caps the input at 60 KB. Shows \"pick a step\" until a Tool is clicked in Steps.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "targets": [
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\" | drop tool_output, error_message | line_format `{{ .tool_input }}` | json ti_old=\"old_string\", ti_old2=\"oldString\", ti_new=\"new_string\", ti_new2=\"newString\", ti_path=\"file_path\", ti_path2=\"filePath\", ti_path3=\"path\", ti_content=\"content\", ti_patch=\"patch\", ti_all=\"replace_all\", ti_all2=\"replaceAll\", ti_edits=\"edits\" | label_format chg_file=`{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ $p }}` | line_format `{{ $st := \"no tool result yet\" }}{{ if eq .outcome \"success\" }}{{ $st = \"applied (outcome success)\" }}{{ else if .outcome }}{{ $st = printf \"**not applied** (outcome %s)\" .outcome }}{{ end }}{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ if not $p }}{{ $p = \"(file not logged)\" }}{{ end }}{{ $p = (Replace (Replace $p \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}{{ $old := .ti_old }}{{ if not $old }}{{ $old = .ti_old2 }}{{ end }}{{ $new := .ti_new }}{{ if not $new }}{{ $new = .ti_new2 }}{{ end }}{{ $all := .ti_all }}{{ if not $all }}{{ $all = .ti_all2 }}{{ end }}{{ if not (or (eq .tool_name \"search_replace\") (eq .tool_name \"write\") (eq .tool_name \"edit\") (eq .tool_name \"hashline_edit\") (eq .tool_name \"apply_patch\") (eq .tool_name \"edit_notebook\") (eq .tool_name \"delete_file\")) }}*Not a file edit.*{{ else if not .tool_input }}*Edit content not logged: needs tool content.*{{ if .file_path }}\n\n~~~~~~~~~~text\n{{ $p }}\n~~~~~~~~~~{{ end }}{{ else if .__error__ }}*Tool input cut at 60 KB by Grok (not valid JSON); its start:*\n\n~~~~~~~~~~text\n{{ (Replace (Replace (regexReplaceAll \"\\\\x{FFFD}+$\" (trunc 8000 .tool_input) \"\") \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if or (eq .tool_name \"search_replace\") (eq .tool_name \"edit\") }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}{{ if eq $all \"true\" }}\n\n*Every occurrence replaced.*{{ end }}\n\n~~~~~~~~~~diff\n{{ if $old }}--- a/{{ $p }}{{ else }}--- /dev/null{{ end }}\n+++ b/{{ $p }}\n{{ if $old }}-{{ Replace (Replace (Replace $old \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n-\" -1 }}\n{{ end }}{{ if $new }}+{{ Replace (Replace (Replace $new \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"write\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Whole file written; its previous content is not logged.*\n\n~~~~~~~~~~diff\n--- (previous content not logged)\n+++ b/{{ $p }}\n{{ if .ti_content }}+{{ Replace (Replace (Replace .ti_content \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"apply_patch\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~diff\n{{ (Replace (Replace .ti_patch \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if eq .tool_name \"hashline_edit\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Line-anchored edits, shown as sent.*\n\n~~~~~~~~~~json\n// {{ $p }}\n{{ (Replace (Replace .ti_edits \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~json\n{{ (Replace (Replace .tool_input \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ end }}` | drop tool_input, ti_old, ti_old2, ti_new, ti_new2, ti_path, ti_path2, ti_path3, ti_content, ti_patch, ti_all, ti_all2, ti_edits, __error__, __error_details__",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | decision!=\"\" | session_id=\"$session\" | tool_use_id!=\"\" | tool_use_id=\"$tool\" | line_format `{{ .tool_input }}` | json ti_old=\"old_string\", ti_old2=\"oldString\", ti_new=\"new_string\", ti_new2=\"newString\", ti_path=\"file_path\", ti_path2=\"filePath\", ti_path3=\"path\", ti_content=\"content\", ti_patch=\"patch\", ti_all=\"replace_all\", ti_all2=\"replaceAll\", ti_edits=\"edits\" | label_format chg_file=`{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ $p }}` | line_format `{{ $st := \"no tool result yet\" }}{{ if eq .outcome \"success\" }}{{ $st = \"applied (outcome success)\" }}{{ else if .outcome }}{{ $st = printf \"**not applied** (outcome %s)\" .outcome }}{{ end }}{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ if not $p }}{{ $p = \"(file not logged)\" }}{{ end }}{{ $p = (Replace (Replace $p \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}{{ $old := .ti_old }}{{ if not $old }}{{ $old = .ti_old2 }}{{ end }}{{ $new := .ti_new }}{{ if not $new }}{{ $new = .ti_new2 }}{{ end }}{{ $all := .ti_all }}{{ if not $all }}{{ $all = .ti_all2 }}{{ end }}{{ if not (or (eq .tool_name \"search_replace\") (eq .tool_name \"write\") (eq .tool_name \"edit\") (eq .tool_name \"hashline_edit\") (eq .tool_name \"apply_patch\") (eq .tool_name \"edit_notebook\") (eq .tool_name \"delete_file\")) }}*Not a file edit.*{{ else if not .tool_input }}*Edit content not logged: needs tool content.*{{ if .file_path }}\n\n~~~~~~~~~~text\n{{ $p }}\n~~~~~~~~~~{{ end }}{{ else if .__error__ }}*Tool input cut at 60 KB by Grok (not valid JSON); its start:*\n\n~~~~~~~~~~text\n{{ (Replace (Replace (regexReplaceAll \"\\\\x{FFFD}+$\" (trunc 8000 .tool_input) \"\") \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if or (eq .tool_name \"search_replace\") (eq .tool_name \"edit\") }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}{{ if eq $all \"true\" }}\n\n*Every occurrence replaced.*{{ end }}\n\n~~~~~~~~~~diff\n{{ if $old }}--- a/{{ $p }}{{ else }}--- /dev/null{{ end }}\n+++ b/{{ $p }}\n{{ if $old }}-{{ Replace (Replace (Replace $old \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n-\" -1 }}\n{{ end }}{{ if $new }}+{{ Replace (Replace (Replace $new \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"write\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Whole file written; its previous content is not logged.*\n\n~~~~~~~~~~diff\n--- (previous content not logged)\n+++ b/{{ $p }}\n{{ if .ti_content }}+{{ Replace (Replace (Replace .ti_content \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"apply_patch\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~diff\n{{ (Replace (Replace .ti_patch \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if eq .tool_name \"hashline_edit\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Line-anchored edits, shown as sent.*\n\n~~~~~~~~~~json\n// {{ $p }}\n{{ (Replace (Replace .ti_edits \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~json\n{{ (Replace (Replace .tool_input \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ end }}` | drop tool_input, ti_old, ti_old2, ti_new, ti_new2, ti_path, ti_path2, ti_path3, ti_content, ti_patch, ti_all, ti_all2, ti_edits, __error__, __error_details__",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 10,
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT f.`Change`\nFROM (\nSELECT -1 AS o, 'Pick a step: click a Tool in Steps.' AS `Change` FROM (SELECT COUNT(*) AS n FROM R) c1, (SELECT COUNT(*) AS n FROM D) c2 WHERE c1.n + c2.n = 0\nUNION ALL\nSELECT 0, CASE WHEN LEFT(COALESCE(r.Line, d.Line), 1) = '*' THEN COALESCE(r.Line, d.Line) ELSE '*Could not render this change.*' END FROM (SELECT 1 AS one) c LEFT JOIN (SELECT labels, tsNs, Line FROM R LIMIT 1) r ON 1 = 1 LEFT JOIN (SELECT labels, tsNs, Line FROM D LIMIT 1) d ON 1 = 1\nWHERE r.labels IS NOT NULL OR d.labels IS NOT NULL\n) f\nORDER BY f.o"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Change"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": []
+        },
+        "maxRowHeight": 600
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Changes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Changes",
+      "description": "Every file edit of the selected conversation (and Talk, if set), newest first: calls of search_replace, write, edit, hashline_edit, apply_patch, edit_notebook, delete_file, with the change rebuilt from the tool input (not a patch reported by Grok; see Step change). File and Tool need tool details (OTEL_LOG_TOOL_DETAILS) for the path and for edit / write / apply_patch / hashline_edit, which Grok otherwise reports as custom_tool and which are then missing here; the change itself needs tool content (OTEL_LOG_TOOL_CONTENT). Outcome other than success = not applied. Click a Tool to inspect that step. Shows the newest 200 edits. Honours VM, Persona, User, Conversation and Talk.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "targets": [
+        {
+          "refId": "R",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"grok-cli\", host_name=~\"$host\"} | tool_name!=\"\" | duration_ms!=\"\" | tool_name=~\"search_replace|write|edit|hashline_edit|apply_patch|edit_notebook|delete_file\" | session_id=\"$session\" | prompt_id=~\"$prompt\" | persona=~\"$persona\" | user_email=~\"$user\" | drop tool_output, error_message | line_format `{{ .tool_input }}` | json ti_old=\"old_string\", ti_old2=\"oldString\", ti_new=\"new_string\", ti_new2=\"newString\", ti_path=\"file_path\", ti_path2=\"filePath\", ti_path3=\"path\", ti_content=\"content\", ti_patch=\"patch\", ti_all=\"replace_all\", ti_all2=\"replaceAll\", ti_edits=\"edits\" | label_format chg_file=`{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ $p }}` | line_format `{{ $st := \"no tool result yet\" }}{{ if eq .outcome \"success\" }}{{ $st = \"applied (outcome success)\" }}{{ else if .outcome }}{{ $st = printf \"**not applied** (outcome %s)\" .outcome }}{{ end }}{{ $p := .file_path }}{{ if not $p }}{{ $p = .ti_path }}{{ end }}{{ if not $p }}{{ $p = .ti_path2 }}{{ end }}{{ if not $p }}{{ $p = .ti_path3 }}{{ end }}{{ if and (not $p) .ti_patch }}{{ $f := regexReplaceAll \"(?s)^.*?\\\\*\\\\*\\\\* (?:Update|Add|Delete) File: ([^\\n]*).*$\" .ti_patch \"${1}\" }}{{ if ne $f .ti_patch }}{{ $p = $f }}{{ end }}{{ end }}{{ if not $p }}{{ $p = \"(file not logged)\" }}{{ end }}{{ $p = (Replace (Replace $p \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}{{ $old := .ti_old }}{{ if not $old }}{{ $old = .ti_old2 }}{{ end }}{{ $new := .ti_new }}{{ if not $new }}{{ $new = .ti_new2 }}{{ end }}{{ $all := .ti_all }}{{ if not $all }}{{ $all = .ti_all2 }}{{ end }}{{ if not (or (eq .tool_name \"search_replace\") (eq .tool_name \"write\") (eq .tool_name \"edit\") (eq .tool_name \"hashline_edit\") (eq .tool_name \"apply_patch\") (eq .tool_name \"edit_notebook\") (eq .tool_name \"delete_file\")) }}*Not a file edit.*{{ else if not .tool_input }}*Edit content not logged: needs tool content.*{{ if .file_path }}\n\n~~~~~~~~~~text\n{{ $p }}\n~~~~~~~~~~{{ end }}{{ else if .__error__ }}*Tool input cut at 60 KB by Grok (not valid JSON); its start:*\n\n~~~~~~~~~~text\n{{ (Replace (Replace (regexReplaceAll \"\\\\x{FFFD}+$\" (trunc 8000 .tool_input) \"\") \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if or (eq .tool_name \"search_replace\") (eq .tool_name \"edit\") }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}{{ if eq $all \"true\" }}\n\n*Every occurrence replaced.*{{ end }}\n\n~~~~~~~~~~diff\n{{ if $old }}--- a/{{ $p }}{{ else }}--- /dev/null{{ end }}\n+++ b/{{ $p }}\n{{ if $old }}-{{ Replace (Replace (Replace $old \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n-\" -1 }}\n{{ end }}{{ if $new }}+{{ Replace (Replace (Replace $new \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"write\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Whole file written; its previous content is not logged.*\n\n~~~~~~~~~~diff\n--- (previous content not logged)\n+++ b/{{ $p }}\n{{ if .ti_content }}+{{ Replace (Replace (Replace .ti_content \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) \"\\n\" \"\\n+\" -1 }}\n{{ end }}~~~~~~~~~~{{ else if eq .tool_name \"apply_patch\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~diff\n{{ (Replace (Replace .ti_patch \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else if eq .tool_name \"hashline_edit\" }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n*Line-anchored edits, shown as sent.*\n\n~~~~~~~~~~json\n// {{ $p }}\n{{ (Replace (Replace .ti_edits \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ else }}*Rebuilt from the tool input, not a patch reported by Grok* \u00b7 {{ $st }}\n\n~~~~~~~~~~json\n{{ (Replace (Replace .tool_input \"\\r\" \"\" -1) \"~~\" \"~\\u200b~\" -1) }}\n~~~~~~~~~~{{ end }}` | drop tool_input, ti_old, ti_old2, ti_new, ti_new2, ti_path, ti_path2, ti_path3, ti_content, ti_patch, ti_all, ti_all2, ti_edits, __error__, __error_details__",
+          "editorMode": "code",
+          "queryType": "range",
+          "maxLines": 200,
+          "hide": true
+        },
+        {
+          "refId": "S",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "sql",
+          "expression": "SELECT q.`Time`, q.`Tool`, q.`File`, q.`Outcome`, q.`Change`, q.`tool_use_id`, q.`session_id`\nFROM (\nSELECT NULL AS `Time`, '' AS `Tool`, '' AS `File`, '' AS `Outcome`,\n       'No file edits: pick a conversation in Conversations, or this conversation (or talk) edited no files in the time range.' AS `Change`,\n       '' AS `tool_use_id`, '' AS `session_id`, 0 AS o\nFROM (SELECT COUNT(*) AS n FROM R) c WHERE c.n = 0\nUNION ALL\nSELECT r.Time AS `Time`, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_name')), '') AS `Tool`, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.chg_file')), '') AS `File`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.outcome')), '') AS `Outcome`, CASE WHEN LEFT(r.Line, 1) = '*' THEN r.Line ELSE '*Could not render this change.*' END AS `Change`,\n  COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.tool_use_id')), '') AS `tool_use_id`, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.labels, '$.session_id')), '') AS `session_id`, CAST(r.tsNs AS SIGNED) AS o\nFROM R r\n) q\nORDER BY q.o DESC"
+        }
+      ],
+      "transformations": [],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tool"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect this step (sets Step)",
+                    "url": "/d/${__dashboard.uid}?${__url_time_range}&${host:queryparam}&${persona:queryparam}&${user:queryparam}&var-session=${__data.fields.session_id}&${prompt:queryparam}&var-tool=${__data.fields.tool_use_id}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "File"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.inspect",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "text": "success",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "error": {
+                        "text": "error",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "completed": {
+                        "text": "completed",
+                        "color": "green",
+                        "index": 2
+                      },
+                      "cancelled": {
+                        "text": "cancelled",
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "permission_rejected": {
+                        "text": "denied",
+                        "color": "red",
+                        "index": 4
+                      },
+                      "hook_denied": {
+                        "text": "hook denied",
+                        "color": "red",
+                        "index": 5
+                      },
+                      "permission_cancelled": {
+                        "text": "cancelled",
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "invalid_tool": {
+                        "text": "invalid tool",
+                        "color": "red",
+                        "index": 7
+                      },
+                      "followup": {
+                        "text": "follow-up",
+                        "color": "orange",
+                        "index": 8
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Change"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "markdown",
+                  "dynamicHeight": true
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tool_use_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom.viz",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": []
+        },
+        "enablePagination": true,
+        "maxRowHeight": 600
+      }
+    }
+  ]
+}

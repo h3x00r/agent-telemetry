@@ -135,3 +135,9 @@ The last one needs `OTEL_LOG_TOOL_DETAILS=1` on the agents and returns nothing u
 { resource.service.name = "claude-code" && span.bash_argv0 != nil } | count_over_time() by (span.bash_argv0)
 ```
 The last one counts the programs Claude Code ran through its Bash tool (a TraceQL metrics query).
+
+With `OTEL_LOG_TOOL_CONTENT=1`, Claude Code attaches what each tool returned to its tool span as a `tool.output` event. These return it for one tool call, and every Edit's file and patch:
+```traceql
+{ span.tool_use_id = "<tool-use-id>" } | select(event.content, event.diff, event.output, event.bash_command)
+{ event:name = "tool.output" && span.tool_name = "Edit" } | select(span.file_path, event.diff)
+```
